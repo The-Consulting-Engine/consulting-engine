@@ -1,6 +1,6 @@
 # Quick Start Guide - After Installing Docker Desktop
 
-Follow these steps to get the AI Consultant app running after you've installed Docker Desktop.
+Follow these steps to get the Consulting Engine app running after you've installed Docker Desktop.
 
 ## Step 1: Verify Docker is Running
 
@@ -18,7 +18,7 @@ You should see version numbers. If you get errors, make sure Docker Desktop is r
 Create a `.env` file in the project root directory:
 
 ```bash
-cd /Users/sidkancharapu/AI-Consultant
+cd /Users/sidkancharapu/consulting-engine
 touch .env
 ```
 

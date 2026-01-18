@@ -33,7 +33,7 @@ app.include_router(context.router, prefix="/context", tags=["context"])
 @app.get("/")
 async def root():
     """Root endpoint."""
-    return {"message": "AI Consultant API", "version": settings.api_version}
+    return {"message": "Consulting Engine API", "version": settings.api_version}
 
 
 @app.get("/health")

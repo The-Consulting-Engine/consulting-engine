@@ -1,3 +1,3 @@
-"""Test suite for AI Consultant backend."""
+"""Test suite for Consulting Engine backend."""
 
 

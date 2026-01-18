@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://ai_consultant:ai_consultant_password@db:5432/ai_consultant_db"
 
     # API
-    api_title: str = "AI Consultant API"
+    api_title: str = "Consulting Engine API"
     api_version: str = "1.0.0"
     api_prefix: str = "/api/v1"
 

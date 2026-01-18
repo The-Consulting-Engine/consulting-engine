@@ -1,4 +1,4 @@
-# AI Consultant - Financial Diagnostics & Improvement System
+# Consulting Engine - Financial Diagnostics & Improvement System
 
 An AI-native decision system that ingests company financial/operational data, reconstructs a canonical P&L, generates and ranks cost/EBITDA improvement initiatives, and produces executive-ready outputs.
 
@@ -180,7 +180,7 @@ frontend/
 
 ```bash
 git clone <repository-url>
-cd AI-Consultant
+cd consulting-engine
 ```
 
 2. **Create environment file**

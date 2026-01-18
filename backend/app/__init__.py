@@ -1,3 +1,3 @@
-"""AI Consultant Backend Application."""
+"""Consulting Engine Backend Application."""
 
 

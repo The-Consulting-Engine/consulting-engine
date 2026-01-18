@@ -1,6 +1,6 @@
-# Setup Guide - AI Consultant
+# Setup Guide - Consulting Engine
 
-This guide will walk you through setting up the AI Consultant application step by step.
+This guide will walk you through setting up the Consulting Engine application step by step.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ This is the easiest way to get started. Docker will handle all dependencies auto
 ### Step 1: Clone or Navigate to the Project
 
 ```bash
-cd AI-Consultant
+cd consulting-engine
 ```
 
 ### Step 2: Create Environment File
