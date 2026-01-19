@@ -1,9 +1,0 @@
-{
-  "risk_multiplier_low": 1.0,
-  "risk_multiplier_med": 1.2,
-  "risk_multiplier_high": 1.5,
-  "time_multiplier_base": 1.0,
-  "time_multiplier_per_week": 0.01
-}
-
-

@@ -1,3 +1,1 @@
-"""Analytics engine for P&L reconstruction and diagnostics."""
-
-
+"""Analytics engine for computing signals and facts."""

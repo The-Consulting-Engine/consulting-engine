@@ -1,3 +1,1 @@
-"""Initiative engine for sizing, scoring, and ranking initiatives."""
-
-
+"""Initiative selection, sizing, and ranking."""

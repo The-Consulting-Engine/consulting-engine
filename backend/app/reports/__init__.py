@@ -1,3 +1,1 @@
-"""Report generation: executive memo and PowerPoint deck."""
-
-
+"""Report generation (Markdown memo and PowerPoint deck)."""

@@ -1,10 +1,8 @@
-import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import Layout from './components/Layout'
-import UploadPage from './pages/UploadPage'
-import CompanyContextPage from './pages/CompanyContextPage'
+import HomePage from './pages/HomePage'
+import RunPage from './pages/RunPage'
 import ResultsPage from './pages/ResultsPage'
 
 const theme = createTheme({
@@ -23,18 +21,14 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<UploadPage />} />
-            <Route path="/context" element={<CompanyContextPage />} />
-            <Route path="/results" element={<ResultsPage />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/run/:runId" element={<RunPage />} />
+          <Route path="/results/:runId" element={<ResultsPage />} />
+        </Routes>
       </Router>
     </ThemeProvider>
   )
 }
 
 export default App
-
-

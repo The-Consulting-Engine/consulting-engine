@@ -1,139 +1,179 @@
-"""Generate executive memo in Markdown format."""
-
-from typing import List, Dict, Any
+"""Generate Markdown executive memo."""
+import json
+from typing import Dict, List, Any
 from datetime import datetime
+from app.llm.client import LLMClient
 
 
-def generate_memo(
-    pnl_data: List[Dict[str, Any]],
-    diagnostics: Dict[str, Any],
-    initiatives: List[Dict[str, Any]],
-    data_completeness: Dict[str, Any],
-    company_context: Dict[str, Any] = None,
-) -> str:
+class MemoGenerator:
     """Generate executive memo in Markdown format."""
-    memo = []
-    memo.append("# Executive Memo: Financial Diagnostics & Improvement Initiatives\n")
-    if company_context and company_context.get("company_name"):
-        memo.append(f"**Company:** {company_context.get('company_name')}\n")
-    memo.append(f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n")
-    memo.append("---\n\n")
     
-    # Add company context section if available
-    if company_context:
-        context_parts = []
-        if company_context.get("industry"):
-            context_parts.append(f"**Industry:** {company_context.get('industry')}")
-        if company_context.get("company_size"):
-            context_parts.append(f"**Company Size:** {company_context.get('company_size')}")
-        if company_context.get("business_model"):
-            context_parts.append(f"**Business Model:** {company_context.get('business_model')}")
-        if company_context.get("growth_stage"):
-            context_parts.append(f"**Growth Stage:** {company_context.get('growth_stage')}")
+    def __init__(self, llm_client: LLMClient):
+        self.llm_client = llm_client
+    
+    def generate(
+        self,
+        company_name: str,
+        mode_info: Dict[str, Any],
+        analytics_facts: List[Dict[str, Any]],
+        initiatives: List[Dict[str, Any]],
+        vertical_name: str
+    ) -> str:
+        """
+        Generate executive memo.
         
-        if context_parts:
-            memo.append("## Company Overview\n\n")
-            memo.append(" | ".join(context_parts))
-            memo.append("\n\n")
-            if company_context.get("key_challenges"):
-                memo.append(f"**Key Challenges:** {company_context.get('key_challenges')}\n\n")
-            if company_context.get("strategic_priorities"):
-                memo.append(f"**Strategic Priorities:** {company_context.get('strategic_priorities')}\n\n")
-
-    # Summary
-    memo.append("## Executive Summary\n\n")
-    if pnl_data:
-        latest = pnl_data[-1]
-        memo.append(
-            f"Our analysis identifies **{len(initiatives)} actionable initiatives** with potential to "
-            f"improve EBITDA by ${sum(i.get('impact_low', 0) for i in initiatives[:5]):,.0f} - "
-            f"${sum(i.get('impact_high', 0) for i in initiatives[:5]):,.0f} annually (based on top 5 initiatives).\n\n"
-        )
-        memo.append(
-            f"Current EBITDA margin: **{latest.get('ebitda_margin_pct', 0):.1f}%** "
-            f"(${latest.get('ebitda', 0):,.0f})\n\n"
-        )
-
-    # What's driving EBITDA
-    memo.append("## What's Driving EBITDA\n\n")
-    if diagnostics.get("trends"):
-        trends = diagnostics["trends"]
-        memo.append("**Key Trends:**\n\n")
-        if "revenue" in trends:
-            direction = trends["revenue"]["direction"]
-            memo.append(f"- Revenue is **{direction}** (R² = {trends['revenue']['r_squared']:.2f})\n")
-        if "ebitda" in trends:
-            direction = trends["ebitda"]["direction"]
-            memo.append(f"- EBITDA is **{direction}** (R² = {trends['ebitda']['r_squared']:.2f})\n")
-        memo.append("\n")
-
-    if diagnostics.get("fixed_vs_variable"):
-        memo.append("**Cost Structure:**\n\n")
-        fv = diagnostics["fixed_vs_variable"]
-        for category, data in fv.items():
-            memo.append(
-                f"- {category.replace('_', ' ').title()}: "
-                f"{data['fixed_pct']*100:.0f}% fixed, {data['variable_pct']*100:.0f}% variable "
-                f"(confidence: {data['confidence']:.0%})\n"
+        Returns:
+            Markdown-formatted memo
+        """
+        try:
+            # Use LLM to write narrative
+            content = self._llm_generate_memo(
+                company_name, mode_info, analytics_facts, initiatives, vertical_name
             )
-        memo.append("\n")
-
-    # Top initiatives
-    memo.append("## Top 5 Initiatives\n\n")
-    if initiatives:
-        top_5 = sorted(initiatives, key=lambda x: x.get("rank", 999))[:5]
-        memo.append("| Rank | Initiative | Impact (Annual) | Confidence | Time | Risk |\n")
-        memo.append("|------|------------|-----------------|------------|------|------|\n")
-
-        for init in top_5:
-            impact_str = f"${init.get('impact_low', 0):,.0f} - ${init.get('impact_high', 0):,.0f}"
-            confidence_str = f"{init.get('confidence', 0)*100:.0f}%"
-            time_str = f"{init.get('time_to_value_weeks', 0)} weeks"
-            risk = init.get("risk_level", "Med")
-            memo.append(
-                f"| {init.get('rank', 'N/A')} | {init.get('title', 'N/A')} | {impact_str} | "
-                f"{confidence_str} | {time_str} | {risk} |\n"
+        except Exception as e:
+            # Fallback to template
+            content = self._template_memo(
+                company_name, mode_info, analytics_facts, initiatives, vertical_name
             )
-        memo.append("\n")
-    else:
-        memo.append("**No new initiatives recommended this quarter.**\n\n")
-        memo.append("This may be due to:\n")
-        memo.append("- Insufficient data to generate high-confidence recommendations\n")
-        memo.append("- Estimated impact of potential initiatives is below threshold\n")
-        memo.append("- Data gaps preventing accurate sizing (see Data Gaps section below)\n\n")
-
-    # Data gaps / what would improve confidence
-    memo.append("## Data Gaps / What Would Improve Confidence\n\n")
-    data_gaps = data_completeness.get("data_gaps", [])
-    if data_gaps:
-        memo.append("**Missing or Incomplete Data:**\n\n")
-        for gap in data_gaps:
-            memo.append(f"- {gap}\n")
-        memo.append("\n")
-        memo.append("**Impact on Analysis:**\n\n")
-        memo.append("- Missing optional datasets reduce confidence in initiative sizing\n")
-        memo.append("- Some initiative types may be disabled or have wider impact ranges\n")
-        memo.append("- Completeness score: {:.0f}%\n\n".format(data_completeness.get("completeness_score", 0) * 100))
-    else:
-        memo.append("No significant data gaps identified. All required and optional datasets are present.\n\n")
+        
+        return content
     
-    # What would improve confidence
-    memo.append("**To Improve Confidence:**\n\n")
-    if not data_completeness.get("has_payroll"):
-        memo.append("- Upload payroll_summary.csv to enable headcount optimization initiatives\n")
-    if not data_completeness.get("has_vendor"):
-        memo.append("- Upload vendor_spend.csv to enable vendor consolidation initiatives\n")
-    if not data_completeness.get("has_revenue_segments"):
-        memo.append("- Upload revenue_by_segment.csv to enable segment-specific analysis\n")
-    if data_completeness.get("payroll_cost_coverage", 1.0) < 0.8:
-        memo.append("- Provide fully_loaded_cost data in payroll_summary.csv for accurate headcount sizing\n")
-    if not data_gaps and data_completeness.get("has_payroll") and data_completeness.get("has_vendor"):
-        memo.append("- All optional datasets are present. Consider extending historical data range for better trend analysis.\n")
-    memo.append("\n")
+    def _llm_generate_memo(
+        self,
+        company_name: str,
+        mode_info: Dict[str, Any],
+        analytics_facts: List[Dict[str, Any]],
+        initiatives: List[Dict[str, Any]],
+        vertical_name: str
+    ) -> str:
+        """Use LLM to generate memo narrative."""
+        prompt = self._build_memo_prompt(
+            company_name, mode_info, analytics_facts, initiatives, vertical_name
+        )
+        
+        response = self.llm_client.generate(
+            prompt,
+            temperature=0.4,
+            max_tokens=2000
+        )
+        
+        return response
+    
+    def _build_memo_prompt(
+        self,
+        company_name: str,
+        mode_info: Dict[str, Any],
+        analytics_facts: List[Dict[str, Any]],
+        initiatives: List[Dict[str, Any]],
+        vertical_name: str
+    ) -> str:
+        """Build prompt for memo generation."""
+        # Format facts
+        facts_text = "\n".join([
+            f"- {f['evidence_key']}: {f['label']} = {f.get('value', f.get('value_text', 'N/A'))} {f.get('unit', '')}"
+            for f in analytics_facts
+        ])
+        
+        # Format initiatives
+        initiatives_text = "\n".join([
+            f"{i['rank']}. {i['title']}\n"
+            f"   Impact: ${i.get('impact_low', 0):,.0f} - ${i.get('impact_high', 0):,.0f}\n"
+            f"   {i.get('explanation', '')}"
+            for i in initiatives
+        ])
+        
+        prompt = f"""Write an executive memo for {company_name} in the {vertical_name} industry.
 
-    memo.append("---\n")
-    memo.append("*This memo was generated automatically. Review all assumptions and sizing before implementation.*\n")
+OPERATING MODE: {mode_info['mode']} (Confidence: {mode_info['confidence']})
+REASONS: {', '.join(mode_info['reasons'])}
 
-    return "".join(memo)
+ANALYTICS FACTS (cite these evidence keys):
+{facts_text}
 
+RECOMMENDED INITIATIVES:
+{initiatives_text}
 
+REQUIREMENTS:
+1. Write in clear, owner-friendly language
+2. Explain WHY metrics matter, not just what they are
+3. Avoid jargon
+4. Cite specific evidence keys when making claims
+5. Clearly state assumptions and data limitations
+6. Structure: Executive Summary, Key Findings, Recommended Actions, Next Steps
+7. Keep memo to 500-800 words
+8. Format in Markdown with proper headers
+
+Write the memo in Markdown format."""
+        
+        return prompt
+    
+    def _template_memo(
+        self,
+        company_name: str,
+        mode_info: Dict[str, Any],
+        analytics_facts: List[Dict[str, Any]],
+        initiatives: List[Dict[str, Any]],
+        vertical_name: str
+    ) -> str:
+        """Fallback template-based memo."""
+        date_str = datetime.now().strftime("%B %d, %Y")
+        
+        # Build findings section
+        findings = []
+        for fact in analytics_facts[:5]:
+            findings.append(f"- **{fact['label']}**: {fact.get('value', fact.get('value_text', 'N/A'))} {fact.get('unit', '')}")
+        findings_text = "\n".join(findings)
+        
+        # Build initiatives section
+        initiatives_list = []
+        for init in initiatives:
+            initiatives_list.append(
+                f"### {init['rank']}. {init['title']}\n\n"
+                f"**Category**: {init['category']}\n\n"
+                f"**Estimated Impact**: ${init.get('impact_low', 0):,.0f} - ${init.get('impact_high', 0):,.0f} annually\n\n"
+                f"{init.get('explanation', init.get('description', ''))}\n"
+            )
+        initiatives_text = "\n".join(initiatives_list)
+        
+        memo = f"""# Executive Diagnostic Memo
+## {company_name}
+
+**Date**: {date_str}  
+**Industry**: {vertical_name}  
+**Analysis Mode**: {mode_info['mode']} (Confidence: {mode_info['confidence']})
+
+---
+
+## Executive Summary
+
+This diagnostic analysis examines {company_name}'s operational and financial performance based on available data. The system is operating in {mode_info['mode']}, with {mode_info['months_available']} months of data analyzed.
+
+## Key Findings
+
+{findings_text}
+
+## Recommended Initiatives
+
+Based on the diagnostic analysis, we recommend the following initiatives ranked by priority and estimated impact:
+
+{initiatives_text}
+
+## Data Quality & Assumptions
+
+**Operating Mode**: {mode_info['mode']}  
+**Confidence Level**: {mode_info['confidence']}  
+**Key Limitations**: {', '.join(mode_info['reasons'])}
+
+## Next Steps
+
+1. Review and validate recommended initiatives
+2. Prioritize 2-3 initiatives for immediate implementation
+3. Establish baseline metrics for impact tracking
+4. Schedule follow-up diagnostic in 90 days
+
+---
+
+*This diagnostic was generated by the Consulting Engine system. All recommendations should be validated with domain expertise and current business context.*
+"""
+        
+        return memo

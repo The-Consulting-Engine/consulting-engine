@@ -4,16 +4,16 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ai_consultant
-      POSTGRES_PASSWORD: ai_consultant_password
-      POSTGRES_DB: ai_consultant_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: consulting_engine
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ai_consultant"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -21,36 +21,36 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/consulting_engine
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: gpt-4-turbo-preview
+      DEBUG: "true"
+      UPLOAD_DIR: /app/uploads
+      REPORTS_DIR: /app/reports
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://ai_consultant:ai_consultant_password@db:5432/ai_consultant_db
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4-turbo-preview}
+    volumes:
+      - ./backend/app:/app/app
+      - backend_uploads:/app/uploads
+      - backend_reports:/app/reports
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: sh -c "python -c 'from app.storage.database import init_db; init_db()' && uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:8000
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
 
 volumes:
   postgres_data:
-
-
+  backend_uploads:
+  backend_reports:

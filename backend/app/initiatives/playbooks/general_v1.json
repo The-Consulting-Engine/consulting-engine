@@ -1,0 +1,176 @@
+{
+  "vertical_id": "general_v1",
+  "vertical_name": "General Operating Business",
+  "data_packs": [
+    {
+      "pack_type": "PNL",
+      "description": "Monthly Profit & Loss statement",
+      "fields": [
+        {
+          "name": "month",
+          "required": true,
+          "synonyms": ["period", "date", "month_year", "accounting_period"],
+          "field_type": "date",
+          "description": "Month identifier"
+        },
+        {
+          "name": "revenue_total",
+          "required": true,
+          "synonyms": ["total_revenue", "sales", "income", "gross_revenue"],
+          "field_type": "numeric",
+          "description": "Total revenue"
+        },
+        {
+          "name": "cogs",
+          "required": false,
+          "synonyms": ["cost_of_goods_sold", "direct_costs", "variable_costs"],
+          "field_type": "numeric",
+          "description": "Cost of goods sold"
+        },
+        {
+          "name": "labor_total",
+          "required": false,
+          "synonyms": ["total_labor", "payroll", "labor_cost", "wages"],
+          "field_type": "numeric",
+          "description": "Total labor cost"
+        },
+        {
+          "name": "operating_expenses",
+          "required": false,
+          "synonyms": ["opex", "expenses", "overhead"],
+          "field_type": "numeric",
+          "description": "Operating expenses"
+        }
+      ]
+    },
+    {
+      "pack_type": "REVENUE",
+      "description": "Revenue transactions",
+      "fields": [
+        {
+          "name": "transaction_date",
+          "required": true,
+          "synonyms": ["date", "sale_date", "invoice_date"],
+          "field_type": "date",
+          "description": "Transaction date"
+        },
+        {
+          "name": "amount",
+          "required": true,
+          "synonyms": ["total", "revenue", "value"],
+          "field_type": "numeric",
+          "description": "Transaction amount"
+        },
+        {
+          "name": "category",
+          "required": false,
+          "synonyms": ["segment", "product_line", "department"],
+          "field_type": "text",
+          "description": "Revenue category"
+        }
+      ]
+    },
+    {
+      "pack_type": "LABOR",
+      "description": "Labor and payroll data",
+      "fields": [
+        {
+          "name": "pay_period_start",
+          "required": true,
+          "synonyms": ["period_start", "start_date", "from_date"],
+          "field_type": "date",
+          "description": "Pay period start date"
+        },
+        {
+          "name": "pay_period_end",
+          "required": true,
+          "synonyms": ["period_end", "end_date", "to_date"],
+          "field_type": "date",
+          "description": "Pay period end date"
+        },
+        {
+          "name": "total_pay",
+          "required": true,
+          "synonyms": ["gross_pay", "wages", "payroll", "compensation"],
+          "field_type": "numeric",
+          "description": "Total pay amount"
+        }
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "signal_id": "labor_pct",
+      "label": "Labor as % of Revenue",
+      "requires": ["revenue_total", "labor_total"],
+      "formula": "labor_total / revenue_total * 100"
+    },
+    {
+      "signal_id": "revenue_trend",
+      "label": "Revenue Growth Trend",
+      "requires": ["revenue_total"],
+      "formula": "linear_regression"
+    }
+  ],
+  "initiatives": [
+    {
+      "id": "gen_revenue_growth",
+      "title": "Revenue Growth Initiatives",
+      "category": "Revenue",
+      "description": "Identify opportunities to increase top-line revenue",
+      "eligibility_rules": {
+        "min_months": 3
+      },
+      "sizing_method": "percentage_of_revenue",
+      "sizing_params": {
+        "low": 0.02,
+        "mid": 0.05,
+        "high": 0.10
+      },
+      "priority_weight": 1.0
+    },
+    {
+      "id": "gen_cost_optimization",
+      "title": "Cost Optimization",
+      "category": "Cost Control",
+      "description": "Reduce operating expenses and improve efficiency",
+      "eligibility_rules": {
+        "min_months": 3,
+        "requires_data": ["PNL"]
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 5000,
+        "mid": 15000,
+        "high": 30000
+      },
+      "priority_weight": 1.0
+    },
+    {
+      "id": "gen_labor_efficiency",
+      "title": "Labor Efficiency Improvements",
+      "category": "Labor",
+      "description": "Optimize staffing and improve labor productivity",
+      "eligibility_rules": {
+        "min_months": 2,
+        "requires_signals": ["labor_pct"]
+      },
+      "sizing_method": "percentage_of_labor",
+      "sizing_params": {
+        "low": 0.03,
+        "mid": 0.07,
+        "high": 0.12
+      },
+      "priority_weight": 1.0
+    }
+  ],
+  "default_assumptions": {
+    "min_confidence_for_ops_mode": 0.7,
+    "min_confidence_for_pnl_mode": 0.6,
+    "max_initiatives_directional": 2,
+    "max_initiatives_ops": 3,
+    "max_initiatives_pnl": 5,
+    "months_for_trend": 6,
+    "outlier_std_threshold": 2.5
+  }
+}

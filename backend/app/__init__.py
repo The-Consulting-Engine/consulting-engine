@@ -1,3 +1,1 @@
-"""Consulting Engine Backend Application."""
-
-
+"""Consulting Engine - AI-assisted decision diagnostic system."""

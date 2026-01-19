@@ -1,7 +1,6 @@
 {
   "name": "consulting-engine-frontend",
-  "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,21 +10,18 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
-    "@mui/material": "^5.14.20",
-    "@mui/icons-material": "^5.14.19",
-    "@emotion/react": "^11.11.1",
+    "react-router-dom": "^6.21.0",
+    "@mui/material": "^5.15.0",
+    "@mui/icons-material": "^5.15.0",
+    "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
-    "recharts": "^2.10.3",
-    "axios": "^1.6.2"
+    "axios": "^1.6.5"
   },
   "devDependencies": {
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8"
+    "vite": "^5.0.11"
   }
 }
-
-
