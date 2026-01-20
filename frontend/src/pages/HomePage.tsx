@@ -76,7 +76,8 @@ function HomePage() {
         company_name: companyName || undefined,
         notes: notes || undefined,
       })
-      navigate(`/run/${run.id}`)
+      // Navigate to questions page first
+      navigate(`/questions/${run.id}`)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create run')
     }

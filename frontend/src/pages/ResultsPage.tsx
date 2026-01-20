@@ -37,6 +37,18 @@ interface Fact {
   source?: string
 }
 
+interface SpecificityDraft {
+  what: string
+  where: string
+  how_much: string
+  timing: string
+  next_steps: string[]
+  assumptions: string[]
+  data_needed: string[]
+  confidence: string
+  specificity_level: string
+}
+
 interface Initiative {
   initiative_id: string
   title: string
@@ -51,6 +63,8 @@ interface Initiative {
   explanation?: string
   assumptions?: string[]
   data_gaps?: string[]
+  lane?: string
+  specificity_draft?: SpecificityDraft
 }
 
 interface Results {
@@ -224,7 +238,15 @@ function ResultsPage() {
           <Divider sx={{ mb: 2 }} />
           
           {results.initiatives.map((initiative) => (
-            <Card key={initiative.initiative_id} sx={{ mb: 2 }} variant="outlined">
+            <Card 
+              key={initiative.initiative_id} 
+              sx={{ 
+                mb: 2,
+                border: initiative.lane === 'sandbox' ? '2px dashed' : undefined,
+                borderColor: initiative.lane === 'sandbox' ? 'warning.main' : undefined
+              }} 
+              variant="outlined"
+            >
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
                   <Chip label={`#${initiative.rank}`} color="primary" size="small" />
@@ -232,7 +254,29 @@ function ResultsPage() {
                     <Typography variant="h6">
                       {initiative.title}
                     </Typography>
-                    <Chip label={initiative.category} size="small" sx={{ mt: 0.5 }} />
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                      <Chip label={initiative.category} size="small" />
+                      {initiative.lane === 'sandbox' && (
+                        <Chip 
+                          label="🧪 Sandbox / Experimental" 
+                          size="small" 
+                          color="warning"
+                          variant="outlined"
+                        />
+                      )}
+                      {initiative.specificity_draft && (
+                        <Chip 
+                          label={initiative.specificity_draft.specificity_level}
+                          size="small"
+                          color={
+                            initiative.specificity_draft.specificity_level === 'DETAILED' ? 'success' :
+                            initiative.specificity_draft.specificity_level === 'SPECIFIC' ? 'info' :
+                            'default'
+                          }
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
                   </Box>
                   {initiative.impact_mid && (
                     <Box sx={{ textAlign: 'right' }}>
@@ -253,6 +297,88 @@ function ResultsPage() {
                   <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
                     {initiative.explanation}
                   </Typography>
+                )}
+
+                {/* Specificity Draft */}
+                {initiative.specificity_draft && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                      Action Plan
+                    </Typography>
+                    
+                    {initiative.specificity_draft.what && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                          What:
+                        </Typography>
+                        <Typography variant="body2">
+                          {initiative.specificity_draft.what}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {initiative.specificity_draft.where && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                          Where/Scope:
+                        </Typography>
+                        <Typography variant="body2">
+                          {initiative.specificity_draft.where}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {initiative.specificity_draft.how_much && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                          Target:
+                        </Typography>
+                        <Typography variant="body2">
+                          {initiative.specificity_draft.how_much}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {initiative.specificity_draft.timing && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                          Timing:
+                        </Typography>
+                        <Typography variant="body2">
+                          {initiative.specificity_draft.timing}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {initiative.specificity_draft.next_steps && initiative.specificity_draft.next_steps.length > 0 && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                          Next Steps:
+                        </Typography>
+                        <List dense>
+                          {initiative.specificity_draft.next_steps.map((step, idx) => (
+                            <ListItem key={idx} sx={{ py: 0, pl: 2 }}>
+                              <ListItemText
+                                primary={`${idx + 1}. ${step}`}
+                                primaryTypographyProps={{ variant: 'body2' }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    )}
+
+                    {initiative.specificity_draft.data_needed && initiative.specificity_draft.data_needed.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="caption" color="warning.main" fontWeight="bold">
+                          Data Needed:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {initiative.specificity_draft.data_needed.join(', ')}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                 )}
 
                 {initiative.assumptions && initiative.assumptions.length > 0 && (

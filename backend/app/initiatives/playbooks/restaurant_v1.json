@@ -299,6 +299,179 @@
         "high": 0.07
       },
       "priority_weight": 0.8
+    },
+    {
+      "id": "rest_local_marketing",
+      "title": "Local Marketing Experiment",
+      "category": "Marketing",
+      "type": "MARKETING",
+      "description": "Test local marketing channels to drive new customer acquisition",
+      "eligibility_rules": {
+        "min_months": 2,
+        "requires_data": ["REVENUE"]
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 8000,
+        "mid": 20000,
+        "high": 40000
+      },
+      "priority_weight": 1.0,
+      "plan_schema": {
+        "channel": "TBD - Google Maps, Social Media, or Local Partnerships",
+        "target_audience": "Local residents within 3-mile radius",
+        "timing_window": "4-week test period",
+        "offer_type": "Limited-time promotion or trial offer",
+        "budget_range": "$1000-$2500 for test",
+        "success_metric": "Cost per new customer < $25, 20% repeat rate",
+        "test_design": "A/B test with tracking codes",
+        "setup_steps": [
+          "Define specific offer and targeting",
+          "Set up tracking (promo codes or dedicated landing page)",
+          "Run campaign for 4 weeks",
+          "Measure new customer acquisition and retention",
+          "Calculate ROI and scale if positive"
+        ]
+      }
+    },
+    {
+      "id": "rest_sms_reactivation",
+      "title": "SMS/Email Reactivation Campaign",
+      "category": "Marketing",
+      "type": "MARKETING",
+      "description": "Re-engage lapsed customers through targeted messaging",
+      "eligibility_rules": {
+        "min_months": 3,
+        "requires_data": ["REVENUE"]
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 5000,
+        "mid": 15000,
+        "high": 30000
+      },
+      "priority_weight": 0.9,
+      "plan_schema": {
+        "channel": "SMS or Email (based on available customer data)",
+        "target_audience": "Customers who haven't visited in 60-90 days",
+        "timing_window": "6-week campaign",
+        "offer_type": "Comeback incentive (e.g., $10 off next visit)",
+        "budget_range": "$500-$1500 (offer cost + platform fees)",
+        "success_metric": "15% reactivation rate, positive ROI within 30 days",
+        "test_design": "Segment customers by recency, test offer variations",
+        "setup_steps": [
+          "Identify lapsed customers from POS data",
+          "Set up SMS/email platform if needed",
+          "Design 2-3 message variations",
+          "Send initial campaign wave",
+          "Track redemption and repeat visits"
+        ]
+      }
+    },
+    {
+      "id": "rest_google_optimization",
+      "title": "Google Maps Conversion Optimization",
+      "category": "Marketing",
+      "type": "MARKETING",
+      "description": "Optimize Google Business Profile to increase walk-in traffic",
+      "eligibility_rules": {
+        "min_months": 1,
+        "requires_data": []
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 3000,
+        "mid": 10000,
+        "high": 20000
+      },
+      "priority_weight": 1.1,
+      "plan_schema": {
+        "channel": "Google Business Profile / Google Maps",
+        "target_audience": "Local searchers looking for dining options",
+        "timing_window": "Ongoing optimization, 8-week test",
+        "offer_type": "No direct offer - focus on profile optimization",
+        "budget_range": "$0-$300 (photos, content creation)",
+        "success_metric": "20% increase in profile views and direction requests",
+        "test_design": "Before/after comparison of Google Insights metrics",
+        "setup_steps": [
+          "Claim and verify Google Business Profile",
+          "Upload high-quality photos (menu, interior, food)",
+          "Add complete business info and attributes",
+          "Encourage reviews from recent customers",
+          "Post weekly updates (specials, events, hours)",
+          "Monitor Google Insights for 8 weeks"
+        ]
+      }
+    },
+    {
+      "id": "rest_delivery_menu_optimization",
+      "title": "Delivery App Menu Optimization",
+      "category": "Marketing",
+      "type": "MARKETING",
+      "description": "Optimize menu presentation and pricing on delivery platforms",
+      "eligibility_rules": {
+        "min_months": 2,
+        "requires_data": ["REVENUE"]
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 10000,
+        "mid": 25000,
+        "high": 50000
+      },
+      "priority_weight": 0.95,
+      "plan_schema": {
+        "channel": "DoorDash, Uber Eats, or similar platforms",
+        "target_audience": "Delivery customers within service radius",
+        "timing_window": "4-week test period",
+        "offer_type": "Menu restructuring, not necessarily price changes",
+        "budget_range": "$0-$500 (photos, descriptions)",
+        "success_metric": "10% increase in delivery orders, improved order value",
+        "test_design": "A/B test menu layouts and descriptions",
+        "setup_steps": [
+          "Audit current delivery menu performance",
+          "Simplify menu (remove low performers)",
+          "Add professional photos for top items",
+          "Optimize descriptions with keywords",
+          "Test combo/bundle offerings",
+          "Track order volume and average ticket for 4 weeks"
+        ]
+      }
+    },
+    {
+      "id": "rest_promo_guardrails",
+      "title": "Implement Promotion Guardrails",
+      "category": "Marketing",
+      "type": "DISCOUNT_CONTROL",
+      "description": "Establish rules for discount usage to protect margins",
+      "eligibility_rules": {
+        "min_months": 2,
+        "requires_data": ["REVENUE"]
+      },
+      "sizing_method": "fixed_value",
+      "sizing_params": {
+        "low": 8000,
+        "mid": 18000,
+        "high": 35000
+      },
+      "priority_weight": 1.05,
+      "plan_schema": {
+        "channel": "All promotional channels",
+        "target_audience": "Internal team (manager training)",
+        "timing_window": "Immediate implementation, ongoing monitoring",
+        "offer_type": "Policy and tracking system for discounts",
+        "budget_range": "$0-$200 (training materials)",
+        "success_metric": "Reduce discount rate by 1-2%, maintain volume",
+        "test_design": "Before/after analysis of discount impact",
+        "setup_steps": [
+          "Audit current discount usage and margin impact",
+          "Set maximum discount thresholds by scenario",
+          "Require approval for discounts above threshold",
+          "Implement tracking in POS",
+          "Train managers on new policy",
+          "Monitor weekly discount rate for 8 weeks"
+        ]
+      }
     }
   ],
   "default_assumptions": {
@@ -309,5 +482,21 @@
     "max_initiatives_pnl": 7,
     "months_for_trend": 6,
     "outlier_std_threshold": 2.5
+  },
+  "sandbox_rules": {
+    "enabled_by_default": false,
+    "max_sandbox_initiatives": 2,
+    "min_risk_tolerance": "moderate",
+    "required_conditions": [
+      "Marketing channels identified",
+      "Risk tolerance moderate or higher"
+    ],
+    "default_confidence": "MEDIUM",
+    "focus_areas": [
+      "Local marketing experiments",
+      "Customer engagement tests",
+      "Digital channel optimization",
+      "Partnership opportunities"
+    ]
   }
 }

@@ -11,6 +11,11 @@ class LLMClient:
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = settings.OPENAI_MODEL
     
+    @property
+    def available(self) -> bool:
+        """Check if LLM is available (API key configured)."""
+        return bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "your-api-key-here")
+    
     def generate(
         self,
         prompt: str,

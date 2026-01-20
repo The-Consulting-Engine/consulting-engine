@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import pandas as pd
 from pathlib import Path
 from app.db.database import get_db
-from app.db.models import Run, Upload, Mapping, AnalyticsFact, Initiative as DBInitiative
+from app.db.models import Run, Upload, Mapping, AnalyticsFact, Initiative as DBInitiative, RunContext
 from app.core.vertical_config import VerticalConfigManager
 from app.normalization.engine import NormalizationEngine
 from app.analytics.engine import AnalyticsEngine
@@ -116,8 +116,21 @@ def run_analysis_pipeline(run_id: int, db: Session):
             )
             db.add(db_fact)
         
+        # Load run context
+        run_context_obj = db.query(RunContext).filter(RunContext.run_id == run_id).first()
+        run_context = None
+        if run_context_obj:
+            run_context = {
+                "constraints": run_context_obj.constraints or {},
+                "operations": run_context_obj.operations or {},
+                "marketing": run_context_obj.marketing or {},
+                "goals": run_context_obj.goals or {},
+                "risk": run_context_obj.risk or {},
+                "derived": run_context_obj.derived or {}
+            }
+        
         # Select and size initiatives
-        selector = InitiativeSelector(config, llm_client)
+        selector = InitiativeSelector(config, llm_client, run_context)
         initiatives = selector.select_and_size(mode_info, analytics_facts, available_packs)
         
         # Save initiatives
@@ -138,7 +151,9 @@ def run_analysis_pipeline(run_id: int, db: Session):
                 priority_score=init.get('priority_score'),
                 explanation=init.get('explanation'),
                 assumptions=init.get('assumptions'),
-                data_gaps=init.get('data_gaps')
+                data_gaps=init.get('data_gaps'),
+                specificity_draft=init.get('specificity_draft'),
+                lane=init.get('lane', 'playbook')
             )
             db.add(db_init)
         
@@ -197,6 +212,8 @@ def get_results(run_id: int, db: Session = Depends(get_db)):
                 "title": i.title,
                 "category": i.category,
                 "description": i.description,
+                "lane": i.lane,
+                "specificity_draft": i.specificity_draft,
                 "rank": i.rank,
                 "impact_low": i.impact_low,
                 "impact_mid": i.impact_mid,

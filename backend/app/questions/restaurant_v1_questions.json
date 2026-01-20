@@ -1,0 +1,451 @@
+{
+  "vertical_id": "restaurant_v1",
+  "question_pack_version": "1.0",
+  "questions": [
+    {
+      "question_id": "pricing_control",
+      "section": "Constraints",
+      "prompt": "Do you have control over menu pricing?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "full_control",
+          "label": "Yes, full control",
+          "effects": {
+            "initiative_priority_boost": ["rest_pricing_discipline", "rest_peak_pricing"]
+          }
+        },
+        {
+          "value": "limited_control",
+          "label": "Limited (need approval for changes)",
+          "effects": {
+            "tags": ["approval_required"]
+          }
+        },
+        {
+          "value": "no_control",
+          "label": "No (franchise/corporate sets pricing)",
+          "effects": {
+            "initiative_blacklist": ["rest_pricing_discipline", "rest_peak_pricing"],
+            "tags": ["franchise_constrained"]
+          }
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "menu_control",
+      "section": "Constraints",
+      "prompt": "Can you modify the menu or offerings?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "full_control",
+          "label": "Yes, full control",
+          "effects": {
+            "initiative_priority_boost": ["rest_waste_reduction"]
+          }
+        },
+        {
+          "value": "limited_control",
+          "label": "Limited modifications allowed",
+          "effects": {}
+        },
+        {
+          "value": "no_control",
+          "label": "No (fixed menu)",
+          "effects": {
+            "initiative_blacklist": ["rest_waste_reduction"],
+            "tags": ["fixed_menu"]
+          }
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "franchise_constraints",
+      "section": "Constraints",
+      "prompt": "Are you operating under franchise constraints?",
+      "type": "yes_no",
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes",
+          "effects": {
+            "tags": ["franchise"],
+            "assumption_overrides": {
+              "implementation_time": "longer_due_to_approvals"
+            }
+          }
+        },
+        {
+          "value": "no",
+          "label": "No",
+          "effects": {}
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "marketing_channels",
+      "section": "Marketing",
+      "prompt": "Which marketing channels are you currently using?",
+      "type": "multi_select",
+      "options": [
+        {"value": "google_maps", "label": "Google Maps/My Business"},
+        {"value": "social_media", "label": "Social Media (Facebook, Instagram)"},
+        {"value": "email_sms", "label": "Email/SMS Marketing"},
+        {"value": "delivery_apps", "label": "Delivery Apps (DoorDash, Uber Eats)"},
+        {"value": "local_ads", "label": "Local Print/Radio"},
+        {"value": "none", "label": "None/Very Limited"}
+      ],
+      "required": true,
+      "effects": {
+        "sandbox_enabled": "contains_any:google_maps,social_media,email_sms,delivery_apps"
+      }
+    },
+    {
+      "question_id": "discount_behavior",
+      "section": "Marketing",
+      "prompt": "How do you currently use discounts and promotions?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "frequent",
+          "label": "Frequently (weekly or more)",
+          "effects": {
+            "initiative_priority_boost": ["rest_discount_control"],
+            "tags": ["high_promo_usage"]
+          }
+        },
+        {
+          "value": "occasional",
+          "label": "Occasionally (monthly)",
+          "effects": {}
+        },
+        {
+          "value": "rare",
+          "label": "Rarely or never",
+          "effects": {
+            "initiative_blacklist": ["rest_discount_control"]
+          }
+        }
+      ],
+      "required": false
+    },
+    {
+      "question_id": "scheduling_method",
+      "section": "Operations",
+      "prompt": "How do you currently schedule staff?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "manual_fixed",
+          "label": "Manual / Fixed schedules",
+          "effects": {
+            "initiative_priority_boost": ["rest_labor_scheduling"],
+            "tags": ["manual_scheduling"]
+          }
+        },
+        {
+          "value": "manual_demand",
+          "label": "Manual but adjusted for demand",
+          "effects": {
+            "initiative_priority_boost": ["rest_labor_scheduling"]
+          }
+        },
+        {
+          "value": "software_basic",
+          "label": "Basic scheduling software",
+          "effects": {}
+        },
+        {
+          "value": "software_advanced",
+          "label": "Advanced demand-based system",
+          "effects": {
+            "initiative_blacklist": ["rest_labor_scheduling"]
+          }
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "manager_autonomy",
+      "section": "Operations",
+      "prompt": "Can managers make day-to-day decisions without approval?",
+      "type": "yes_no",
+      "options": [
+        {
+          "value": "yes",
+          "label": "Yes",
+          "effects": {
+            "assumption_overrides": {
+              "implementation_speed": "fast"
+            }
+          }
+        },
+        {
+          "value": "no",
+          "label": "No",
+          "effects": {
+            "tags": ["requires_approval"],
+            "assumption_overrides": {
+              "implementation_speed": "slow"
+            }
+          }
+        }
+      ],
+      "required": false
+    },
+    {
+      "question_id": "capacity_bottlenecks",
+      "section": "Operations",
+      "prompt": "What are your main capacity constraints? (Select all that apply)",
+      "type": "multi_select",
+      "options": [
+        {
+          "value": "kitchen",
+          "label": "Kitchen prep/cooking capacity",
+          "effects": {
+            "initiative_blacklist": ["rest_throughput"]
+          }
+        },
+        {
+          "value": "seating",
+          "label": "Seating/table availability",
+          "effects": {
+            "initiative_priority_boost": ["rest_throughput"]
+          }
+        },
+        {
+          "value": "staff",
+          "label": "Staff availability",
+          "effects": {
+            "initiative_priority_boost": ["rest_labor_scheduling"]
+          }
+        },
+        {
+          "value": "parking",
+          "label": "Parking/access",
+          "effects": {}
+        },
+        {
+          "value": "none",
+          "label": "No major constraints",
+          "effects": {
+            "initiative_priority_boost": ["rest_throughput"]
+          }
+        }
+      ],
+      "required": false
+    },
+    {
+      "question_id": "primary_objective",
+      "section": "Goals",
+      "prompt": "What is your primary business objective right now?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "increase_revenue",
+          "label": "Increase revenue/sales",
+          "effects": {
+            "initiative_priority_boost": ["rest_pricing_discipline", "rest_throughput", "rest_peak_pricing"],
+            "tags": ["revenue_focused"]
+          }
+        },
+        {
+          "value": "improve_margins",
+          "label": "Improve profit margins",
+          "effects": {
+            "initiative_priority_boost": ["rest_labor_scheduling", "rest_waste_reduction", "rest_overhead_reduction"],
+            "tags": ["margin_focused"]
+          }
+        },
+        {
+          "value": "reduce_costs",
+          "label": "Reduce operating costs",
+          "effects": {
+            "initiative_priority_boost": ["rest_labor_scheduling", "rest_overhead_reduction", "rest_waste_reduction"],
+            "tags": ["cost_focused"]
+          }
+        },
+        {
+          "value": "stabilize",
+          "label": "Stabilize operations",
+          "effects": {
+            "tags": ["stability_focused"]
+          }
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "risk_tolerance",
+      "section": "Risk",
+      "prompt": "How comfortable are you with experimenting/testing new approaches?",
+      "type": "single_select",
+      "options": [
+        {
+          "value": "high",
+          "label": "High - willing to test new ideas",
+          "effects": {
+            "sandbox_enabled": true,
+            "tags": ["risk_tolerant"]
+          }
+        },
+        {
+          "value": "moderate",
+          "label": "Moderate - open to proven strategies",
+          "effects": {
+            "sandbox_enabled": true,
+            "tags": ["risk_moderate"]
+          }
+        },
+        {
+          "value": "low",
+          "label": "Low - prefer established approaches only",
+          "effects": {
+            "sandbox_enabled": false,
+            "tags": ["risk_averse"]
+          }
+        }
+      ],
+      "required": true
+    },
+    {
+      "question_id": "data_availability",
+      "section": "Risk",
+      "prompt": "Beyond what you've uploaded, what other data can you easily access?",
+      "type": "multi_select",
+      "options": [
+        {"value": "pos_detailed", "label": "Detailed POS transaction data"},
+        {"value": "customer_data", "label": "Customer contact list/emails"},
+        {"value": "inventory", "label": "Inventory tracking data"},
+        {"value": "reviews", "label": "Customer reviews/feedback"},
+        {"value": "reservations", "label": "Reservation data"},
+        {"value": "none", "label": "None beyond what I uploaded"}
+      ],
+      "required": false,
+      "effects": {
+        "assumption_overrides": "data_richness"
+      }
+    },
+    {
+      "question_id": "total_employees",
+      "section": "Operations",
+      "prompt": "How many total employees do you have? (Include both full-time and part-time)",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 15",
+      "required": false
+    },
+    {
+      "question_id": "daily_labor_hours",
+      "section": "Operations",
+      "prompt": "What are your average total daily labor hours across all employees?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 80 (all employees combined per day)",
+      "required": false,
+      "help_text": "Add up all employee hours for a typical day"
+    },
+    {
+      "question_id": "avg_hourly_rate",
+      "section": "Operations",
+      "prompt": "What is your average hourly labor cost (including wages + taxes + benefits)?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 18.50",
+      "required": false,
+      "help_text": "Blended rate across all employees"
+    },
+    {
+      "question_id": "peak_hours",
+      "section": "Operations",
+      "prompt": "What are your peak service hours? (e.g., '11am-2pm, 5pm-9pm')",
+      "type": "text",
+      "input_type": "text",
+      "placeholder": "e.g., 11am-2pm, 6pm-9pm",
+      "required": false
+    },
+    {
+      "question_id": "seating_capacity",
+      "section": "Operations",
+      "prompt": "What is your seating capacity or max customers you can serve simultaneously?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 60",
+      "required": false
+    },
+    {
+      "question_id": "monthly_revenue",
+      "section": "Goals",
+      "prompt": "What is your approximate monthly revenue? (If you uploaded data, we'll use that - this is just for context)",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 85000",
+      "required": false
+    },
+    {
+      "question_id": "food_cost_pct",
+      "section": "Goals",
+      "prompt": "What is your current food cost as a percentage of revenue? (COGS %)",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 32",
+      "required": false,
+      "help_text": "Enter as percentage (e.g., 32 for 32%)"
+    },
+    {
+      "question_id": "avg_check_size",
+      "section": "Goals",
+      "prompt": "What is your average check/ticket size per customer?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 28.50",
+      "required": false
+    },
+    {
+      "question_id": "monthly_rent",
+      "section": "Goals",
+      "prompt": "What is your monthly rent/occupancy cost?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 8500",
+      "required": false
+    },
+    {
+      "question_id": "monthly_marketing_spend",
+      "section": "Marketing",
+      "prompt": "What is your current monthly marketing spend (across all channels)?",
+      "type": "text",
+      "input_type": "number",
+      "placeholder": "e.g., 2000",
+      "required": false,
+      "help_text": "Include ads, promotions, social media, etc."
+    }
+  ],
+  "default_responses": {
+    "pricing_control": "full_control",
+    "menu_control": "full_control",
+    "franchise_constraints": "no",
+    "marketing_channels": ["google_maps", "social_media", "delivery_apps"],
+    "discount_behavior": "occasional",
+    "scheduling_method": "manual_demand",
+    "manager_autonomy": "yes",
+    "capacity_bottlenecks": ["seating"],
+    "primary_objective": "increase_revenue",
+    "risk_tolerance": "moderate",
+    "data_availability": ["pos_detailed", "customer_data"],
+    "total_employees": "12",
+    "daily_labor_hours": "90",
+    "avg_hourly_rate": "17.50",
+    "peak_hours": "11:30am-2pm, 5:30pm-9pm",
+    "seating_capacity": "65",
+    "monthly_revenue": "75000",
+    "food_cost_pct": "32",
+    "avg_check_size": "28",
+    "monthly_rent": "7500",
+    "monthly_marketing_spend": "1500"
+  }
+}

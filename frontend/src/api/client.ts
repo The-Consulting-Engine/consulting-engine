@@ -97,3 +97,24 @@ export const listReports = async (runId: number) => {
 export const downloadReport = (reportId: number) => {
   return `${API_BASE}/reports/download/${reportId}`
 }
+
+// Questions
+export const getQuestions = async (runId: number) => {
+  const response = await api.get(`/questions/${runId}/questions`)
+  return response.data
+}
+
+export const saveResponses = async (runId: number, responses: any[]) => {
+  const response = await api.post(`/questions/${runId}/responses`, { responses })
+  return response.data
+}
+
+export const getResponses = async (runId: number) => {
+  const response = await api.get(`/questions/${runId}/responses`)
+  return response.data
+}
+
+export const getContext = async (runId: number) => {
+  const response = await api.get(`/questions/${runId}/context`)
+  return response.data
+}

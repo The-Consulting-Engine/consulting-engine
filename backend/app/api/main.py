@@ -1,7 +1,7 @@
 """FastAPI application."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import runs, uploads, mappings, analytics, reports
+from app.api.routes import runs, uploads, mappings, analytics, reports, questions
 from app.db.database import engine, Base
 
 # Create tables
@@ -28,6 +28,7 @@ app.include_router(uploads.router, prefix="/api/uploads", tags=["uploads"])
 app.include_router(mappings.router, prefix="/api/mappings", tags=["mappings"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+app.include_router(questions.router, prefix="/api/questions", tags=["questions"])
 
 
 @app.get("/")

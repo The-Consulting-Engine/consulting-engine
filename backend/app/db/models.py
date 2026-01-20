@@ -30,6 +30,8 @@ class Run(Base):
     analytics_facts = relationship("AnalyticsFact", back_populates="run", cascade="all, delete-orphan")
     initiatives = relationship("Initiative", back_populates="run", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="run", cascade="all, delete-orphan")
+    question_responses = relationship("QuestionResponse", back_populates="run", cascade="all, delete-orphan")
+    run_context = relationship("RunContext", back_populates="run", uselist=False, cascade="all, delete-orphan")
 
 
 class Upload(Base):
@@ -118,6 +120,12 @@ class Initiative(Base):
     assumptions = Column(JSON)
     data_gaps = Column(JSON)
     
+    # Specificity draft
+    specificity_draft = Column(JSON)  # {what, where, how_much, timing, next_steps, assumptions, data_needed, confidence, specificity_level}
+    
+    # Initiative lane
+    lane = Column(String, default="playbook")  # playbook, sandbox
+    
     run = relationship("Run", back_populates="initiatives")
 
 
@@ -133,3 +141,40 @@ class Report(Base):
     file_path = Column(String, nullable=False)
     
     run = relationship("Run", back_populates="reports")
+
+
+class QuestionResponse(Base):
+    """User responses to intake questions."""
+    __tablename__ = "question_responses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("runs.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    question_id = Column(String, nullable=False, index=True)
+    section = Column(String)  # Constraints, Operations, Marketing, Goals, Risk
+    response_value = Column(JSON)  # Can be single value or array for multi-select
+    
+    run = relationship("Run", back_populates="question_responses")
+
+
+class RunContext(Base):
+    """Derived context from question responses."""
+    __tablename__ = "run_contexts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("runs.id"), nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Summarized answers by section
+    constraints = Column(JSON)  # {pricing_control: ..., menu_control: ..., ...}
+    operations = Column(JSON)   # {scheduling_method: ..., capacity_bottlenecks: ..., ...}
+    marketing = Column(JSON)    # {channels_used: [...], discount_behavior: ..., ...}
+    goals = Column(JSON)        # {primary_objective: ..., ...}
+    risk = Column(JSON)         # {risk_tolerance: ..., ...}
+    
+    # Derived effects for initiative selection
+    derived = Column(JSON)      # {initiative_blacklist: [...], initiative_priority_boost: [...], tags: [...], assumption_overrides: {...}}
+    
+    run = relationship("Run", back_populates="run_context")
