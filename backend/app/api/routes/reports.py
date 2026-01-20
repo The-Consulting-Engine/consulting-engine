@@ -1,5 +1,5 @@
 """Report generation routes."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -9,11 +9,29 @@ from app.core.config import settings
 from app.core.vertical_config import VerticalConfigManager
 from app.reports.memo import MemoGenerator
 from app.reports.deck import DeckGenerator
+from app.reports.deck_v2 import EnhancedDeckGenerator
 from app.llm.client import LLMClient
 
 router = APIRouter()
 config_manager = VerticalConfigManager()
 llm_client = LLMClient()
+
+
+def _calculate_months_available(analytics_facts: list) -> int:
+    """Calculate months of data from analytics facts."""
+    # Look for month-related facts or count unique periods
+    for fact in analytics_facts:
+        if fact.get('evidence_key') == 'months_analyzed':
+            return int(fact.get('value', 0))
+
+    # Count unique periods
+    periods = set()
+    for fact in analytics_facts:
+        period = fact.get('period')
+        if period:
+            periods.add(period)
+
+    return len(periods) if periods else 3  # Default to 3 if unknown
 
 # Ensure reports directory exists
 Path(settings.REPORTS_DIR).mkdir(parents=True, exist_ok=True)
@@ -108,32 +126,38 @@ def generate_memo(run_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{run_id}/generate-deck")
-def generate_deck(run_id: int, db: Session = Depends(get_db)):
-    """Generate PowerPoint deck."""
+def generate_deck(
+    run_id: int,
+    enhanced: bool = Query(default=True, description="Use enhanced deck with Show Your Work"),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate PowerPoint deck.
+
+    Args:
+        run_id: The run ID
+        enhanced: If True, use the enhanced deck generator with "Show Your Work" slides
+    """
     run = db.query(Run).filter(Run.id == run_id).first()
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
-    
+
     if run.status != "complete":
         raise HTTPException(status_code=400, detail="Analysis not complete")
-    
+
     # Get data
     facts = db.query(AnalyticsFact).filter(AnalyticsFact.run_id == run_id).all()
     initiatives = db.query(DBInitiative).filter(
         DBInitiative.run_id == run_id
     ).order_by(DBInitiative.rank).all()
-    
+
     # Get vertical config
     config = config_manager.get_config(run.vertical_id)
-    
-    # Prepare data
-    mode_info = {
-        "mode": run.mode,
-        "confidence": run.confidence_score,
-        "reasons": [],
-        "months_available": 0
-    }
-    
+
+    # Build initiative map from playbook for sizing methods
+    playbook_initiatives = {init.id: init for init in config.initiatives}
+
+    # Prepare analytics facts
     analytics_facts = [
         {
             "evidence_key": f.evidence_key,
@@ -146,9 +170,22 @@ def generate_deck(run_id: int, db: Session = Depends(get_db)):
         }
         for f in facts
     ]
-    
-    initiatives_list = [
-        {
+
+    # Calculate months available
+    months_available = _calculate_months_available(analytics_facts)
+
+    # Prepare mode info
+    mode_info = {
+        "mode": run.mode or "DIRECTIONAL_MODE",
+        "confidence": run.confidence_score or 0.5,
+        "reasons": [],
+        "months_available": months_available
+    }
+
+    # Prepare initiatives with full data including specificity_draft and sizing info
+    initiatives_list = []
+    for i in initiatives:
+        init_data = {
             "initiative_id": i.initiative_id,
             "title": i.title,
             "category": i.category,
@@ -157,17 +194,35 @@ def generate_deck(run_id: int, db: Session = Depends(get_db)):
             "impact_low": i.impact_low,
             "impact_mid": i.impact_mid,
             "impact_high": i.impact_high,
+            "impact_unit": i.impact_unit,
             "explanation": i.explanation,
-            "assumptions": i.assumptions,
-            "data_gaps": i.data_gaps
+            "assumptions": i.assumptions or [],
+            "data_gaps": i.data_gaps or [],
+            "specificity_draft": i.specificity_draft or {},
+            "priority_score": i.priority_score
         }
-        for i in initiatives
-    ]
-    
+
+        # Add sizing method info from playbook if available
+        playbook_init = playbook_initiatives.get(i.initiative_id)
+        if playbook_init:
+            init_data["sizing_method"] = playbook_init.sizing_method
+            init_data["sizing_params"] = playbook_init.sizing_params
+        else:
+            # Default for sandbox initiatives
+            init_data["sizing_method"] = "fixed_value"
+            init_data["sizing_params"] = {"low": 5000, "mid": 15000, "high": 30000}
+
+        initiatives_list.append(init_data)
+
     # Generate deck
-    file_path = Path(settings.REPORTS_DIR) / f"run_{run_id}_deck.pptx"
-    
-    generator = DeckGenerator()
+    suffix = "_enhanced" if enhanced else ""
+    file_path = Path(settings.REPORTS_DIR) / f"run_{run_id}_deck{suffix}.pptx"
+
+    if enhanced:
+        generator = EnhancedDeckGenerator()
+    else:
+        generator = DeckGenerator()
+
     generator.generate(
         run.company_name or "Company",
         mode_info,
@@ -176,20 +231,21 @@ def generate_deck(run_id: int, db: Session = Depends(get_db)):
         config.vertical_name,
         str(file_path)
     )
-    
+
     # Save report record
     report = DBReport(
         run_id=run_id,
-        report_type="deck",
+        report_type="deck_enhanced" if enhanced else "deck",
         file_path=str(file_path)
     )
     db.add(report)
     db.commit()
-    
+
     return {
         "message": "Deck generated",
         "file_path": str(file_path),
-        "report_id": report.id
+        "report_id": report.id,
+        "enhanced": enhanced
     }
 
 
