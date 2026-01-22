@@ -38,12 +38,16 @@ interface Vertical {
 function HomePage() {
   const navigate = useNavigate()
   const [runs, setRuns] = useState<Run[]>([])
-  const [verticals, setVerticals] = useState<Vertical[]>([])
+  const [verticals, setVerticals] = useState<Vertical[]>([
+    { vertical_id: 'restaurant_v1', vertical_name: 'Restaurant Operations' },
+    { vertical_id: 'general_v1', vertical_name: 'General Operating Business' }
+  ])
   const [showCreate, setShowCreate] = useState(false)
   const [companyName, setCompanyName] = useState('')
-  const [selectedVertical, setSelectedVertical] = useState('restaurant_v1')
+  const [selectedVertical, setSelectedVertical] = useState<string>('restaurant_v1')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
+  const [loadingVerticals, setLoadingVerticals] = useState(true)
 
   useEffect(() => {
     loadRuns()
@@ -61,10 +65,35 @@ function HomePage() {
 
   const loadVerticals = async () => {
     try {
+      setLoadingVerticals(true)
+      console.log('Loading verticals from API...')
       const data = await listVerticals()
-      setVerticals(data.verticals)
-    } catch (err) {
+      console.log('Verticals API response:', data)
+      if (data && data.verticals && data.verticals.length > 0) {
+        console.log(`Loaded ${data.verticals.length} verticals:`, data.verticals)
+        setVerticals(data.verticals)
+        // Ensure selectedVertical is valid
+        const validVertical = data.verticals.find((v: Vertical) => v.vertical_id === selectedVertical)
+        if (validVertical) {
+          // Current selection is valid, keep it
+          console.log('Selected vertical is valid:', selectedVertical)
+        } else {
+          // Current selection not in list, use first available
+          const newSelection = data.verticals[0].vertical_id
+          console.log(`Selected vertical ${selectedVertical} not found, switching to:`, newSelection)
+          setSelectedVertical(newSelection)
+        }
+      } else {
+        // Keep default fallback verticals
+        console.warn('No verticals returned from API, using defaults')
+      }
+      setLoadingVerticals(false)
+    } catch (err: any) {
       console.error('Failed to load verticals:', err)
+      console.error('Error details:', err.response?.data || err.message)
+      // Keep default fallback verticals on error
+      setLoadingVerticals(false)
+      // Don't show error to user - just use defaults
     }
   }
 
@@ -132,19 +161,41 @@ function HomePage() {
                 fullWidth
               />
 
-              <FormControl fullWidth>
-                <InputLabel>Vertical</InputLabel>
+              <FormControl fullWidth required error={!selectedVertical}>
+                <InputLabel id="vertical-select-label">Vertical</InputLabel>
                 <Select
-                  value={selectedVertical}
+                  labelId="vertical-select-label"
+                  value={selectedVertical || ''}
                   label="Vertical"
-                  onChange={(e) => setSelectedVertical(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Vertical changed to:', e.target.value)
+                    setSelectedVertical(e.target.value)
+                  }}
+                  disabled={loadingVerticals || verticals.length === 0}
+                  displayEmpty
                 >
-                  {verticals.map((v) => (
-                    <MenuItem key={v.vertical_id} value={v.vertical_id}>
-                      {v.vertical_name}
+                  {verticals.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      {loadingVerticals ? 'Loading verticals...' : 'No verticals available'}
                     </MenuItem>
-                  ))}
+                  ) : (
+                    verticals.map((v) => (
+                      <MenuItem key={v.vertical_id} value={v.vertical_id}>
+                        {v.vertical_name}
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
+                {loadingVerticals && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Loading verticals...
+                  </Typography>
+                )}
+                {!selectedVertical && verticals.length > 0 && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    Please select a vertical
+                  </Typography>
+                )}
               </FormControl>
 
               <TextField

@@ -96,9 +96,38 @@ def run_analysis_pipeline(run_id: int, db: Session):
             normalized_data[upload.pack_type] = normalized_df
             available_packs.append(upload.pack_type)
         
-        # Compute analytics
+        # Compute analytics - use both engines for comprehensive statistics
         analytics_engine = AnalyticsEngine(config)
         mode_info, analytics_facts = analytics_engine.compute_analytics(normalized_data)
+        
+        # Also use enhanced engine if available for additional deep analysis
+        try:
+            from app.analytics.enhanced_engine import EnhancedAnalyticsEngine
+            enhanced_engine = EnhancedAnalyticsEngine()
+            enhanced_results = enhanced_engine.analyze(normalized_data)
+            
+            # Merge enhanced metrics into analytics_facts
+            if enhanced_results and 'metrics' in enhanced_results:
+                for metric_dict in enhanced_results['metrics']:
+                    # Convert ComputedMetric dict to fact format
+                    evidence = metric_dict.get('evidence', {})
+                    time_range = evidence.get('time_range')
+                    period_str = time_range[0] if time_range and len(time_range) > 0 else "analysis_period"
+                    
+                    analytics_facts.append({
+                        "evidence_key": metric_dict.get('metric_id', ''),
+                        "label": metric_dict.get('label', ''),
+                        "value": metric_dict.get('value'),
+                        "value_text": str(metric_dict.get('value', '')),
+                        "unit": metric_dict.get('unit', ''),
+                        "period": period_str,
+                        "source": f"enhanced_{evidence.get('dataset', 'unknown')}"
+                    })
+        except Exception as e:
+            # Enhanced engine not available or failed - continue with basic engine
+            import traceback
+            print(f"Enhanced engine failed: {e}")
+            traceback.print_exc()
         
         # Save mode info
         run.mode = mode_info['mode']
@@ -113,10 +142,10 @@ def run_analysis_pipeline(run_id: int, db: Session):
                 evidence_key=fact['evidence_key'],
                 label=fact['label'],
                 value=fact.get('value'),
-                value_text=fact.get('value_text'),
+                value_text=fact.get('value_text', str(fact.get('value', ''))),
                 unit=fact.get('unit'),
                 period=fact.get('period'),
-                source=fact.get('source')
+                source=fact.get('source', 'computed')
             )
             db.add(db_fact)
         

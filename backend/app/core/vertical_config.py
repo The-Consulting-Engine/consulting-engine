@@ -55,15 +55,28 @@ class VerticalConfigManager:
             config_dir = Path(__file__).parent.parent / "initiatives" / "playbooks"
         self.config_dir = Path(config_dir)
         self._configs: Dict[str, VerticalConfig] = {}
-        self._load_configs()
+        try:
+            self._load_configs()
+        except Exception as e:
+            print(f"Error initializing VerticalConfigManager: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue with empty configs - will use fallbacks
     
     def _load_configs(self):
         """Load all vertical configurations."""
+        import traceback
         for config_file in self.config_dir.glob("*.json"):
-            with open(config_file, 'r') as f:
-                data = json.load(f)
-                config = self._parse_config(data)
-                self._configs[config.vertical_id] = config
+            try:
+                with open(config_file, 'r') as f:
+                    data = json.load(f)
+                    config = self._parse_config(data)
+                    self._configs[config.vertical_id] = config
+            except Exception as e:
+                print(f"Failed to load config {config_file}: {e}")
+                traceback.print_exc()
+                # Continue loading other configs
+                continue
     
     def _parse_config(self, data: Dict) -> VerticalConfig:
         """Parse configuration from JSON."""

@@ -56,12 +56,21 @@ def generate_memo(run_id: int, db: Session = Depends(get_db)):
     # Get vertical config
     config = config_manager.get_config(run.vertical_id)
     
+    # Calculate months available from facts
+    months_available = _calculate_months_available([
+        {
+            "evidence_key": f.evidence_key,
+            "period": f.period
+        }
+        for f in facts
+    ])
+    
     # Prepare data
     mode_info = {
         "mode": run.mode,
         "confidence": run.confidence_score,
         "reasons": [],
-        "months_available": 0  # TODO: Calculate from facts
+        "months_available": months_available
     }
     
     analytics_facts = [

@@ -40,11 +40,37 @@ def confirm_mappings(
     if not upload:
         raise HTTPException(status_code=404, detail="Upload not found")
     
+    # Validate mappings
+    if not batch.mappings:
+        raise HTTPException(status_code=400, detail="No mappings provided")
+    
+    # Get vertical config to validate canonical fields
+    from app.core.vertical_config import VerticalConfigManager
+    config_manager = VerticalConfigManager()
+    data_pack = config_manager.get_data_pack(run.vertical_id, upload.pack_type)
+    
+    if data_pack:
+        valid_fields = {f.name for f in data_pack.fields}
+        invalid_fields = [
+            m.canonical_field for m in batch.mappings 
+            if m.canonical_field not in valid_fields
+        ]
+        if invalid_fields:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid canonical fields: {', '.join(invalid_fields)}"
+            )
+    
     # Delete existing mappings for this upload
     db.query(Mapping).filter(Mapping.upload_id == batch.upload_id).delete()
     
-    # Create new mappings
+    # Create new mappings (filter out empty mappings)
+    confirmed_count = 0
     for mapping_data in batch.mappings:
+        # Skip mappings with no source columns (unless explicitly allowed)
+        if not mapping_data.source_columns and mapping_data.confidence > 0:
+            continue
+            
         mapping = Mapping(
             run_id=run_id,
             upload_id=batch.upload_id,
@@ -55,10 +81,15 @@ def confirm_mappings(
             is_confirmed=True
         )
         db.add(mapping)
+        confirmed_count += 1
     
     db.commit()
     
-    return {"message": "Mappings confirmed", "count": len(batch.mappings)}
+    return {
+        "message": "Mappings confirmed successfully",
+        "count": confirmed_count,
+        "upload_id": batch.upload_id
+    }
 
 
 @router.get("/{run_id}/mappings")

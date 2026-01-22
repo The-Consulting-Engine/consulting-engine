@@ -36,8 +36,12 @@ def upload_file(
         raise HTTPException(status_code=404, detail="Run not found")
     
     # Validate pack type
-    if pack_type not in ["PNL", "REVENUE", "LABOR"]:
-        raise HTTPException(status_code=400, detail="Invalid pack_type")
+    valid_pack_types = ["PNL", "REVENUE", "LABOR"]
+    if pack_type not in valid_pack_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid pack_type: {pack_type}. Must be one of: {', '.join(valid_pack_types)}"
+        )
     
     # Save file
     file_path = Path(settings.UPLOAD_DIR) / f"run_{run_id}_{pack_type}_{file.filename}"
@@ -128,11 +132,55 @@ def suggest_mappings(run_id: int, upload_id: int, db: Session = Depends(get_db))
             data_pack,
             upload.pack_type
         )
+        
+        # Validate mappings
+        if not suggested_mappings:
+            # Fallback to heuristic if LLM fails
+            from app.ingestion.mapper import ColumnMapper
+            fallback_mapper = ColumnMapper(llm_client)
+            suggested_mappings = fallback_mapper._heuristic_mappings(
+                upload.column_profile,
+                data_pack
+            )
+        
+        # Ensure at least required fields are mapped
+        required_fields = [f.name for f in data_pack.fields if f.required]
+        mapped_fields = [m.get('canonical_field') for m in suggested_mappings]
+        missing_required = [f for f in required_fields if f not in mapped_fields]
+        
+        if missing_required:
+            # Add warnings for missing required fields
+            for field_name in missing_required:
+                suggested_mappings.append({
+                    "canonical_field": field_name,
+                    "source_columns": [],
+                    "transform": "none",
+                    "confidence": 0.0,
+                    "reasoning": f"Required field '{field_name}' not found in source columns"
+                })
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to suggest mappings: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Try heuristic fallback
+        try:
+            from app.ingestion.mapper import ColumnMapper
+            fallback_mapper = ColumnMapper(llm_client)
+            suggested_mappings = fallback_mapper._heuristic_mappings(
+                upload.column_profile,
+                data_pack
+            )
+        except Exception as e2:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to suggest mappings: {str(e)}. Fallback also failed: {str(e2)}"
+            )
     
     return {
         "upload_id": upload_id,
         "pack_type": upload.pack_type,
-        "suggested_mappings": suggested_mappings
+        "suggested_mappings": suggested_mappings,
+        "warnings": {
+            "missing_required": [m for m in suggested_mappings if m.get('confidence', 1) == 0.0]
+        } if any(m.get('confidence', 1) == 0.0 for m in suggested_mappings) else None
     }

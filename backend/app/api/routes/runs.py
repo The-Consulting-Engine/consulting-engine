@@ -118,12 +118,50 @@ def delete_run(run_id: int, db: Session = Depends(get_db)):
 @router.get("/verticals/list")
 def list_verticals():
     """List available verticals."""
-    verticals = []
-    for vertical_id in config_manager.list_verticals():
-        config = config_manager.get_config(vertical_id)
-        verticals.append({
-            "vertical_id": vertical_id,
-            "vertical_name": config.vertical_name
-        })
-    
-    return {"verticals": verticals}
+        try:
+        verticals = []
+        available_ids = config_manager.list_verticals()
+        
+        if not available_ids:
+            print("WARNING: No verticals loaded, using fallback")
+            # Fallback if no configs loaded
+            return {
+                "verticals": [
+                    {"vertical_id": "restaurant_v1", "vertical_name": "Restaurant Operations"},
+                    {"vertical_id": "general_v1", "vertical_name": "General Operating Business"}
+                ]
+            }
+        
+        for vertical_id in available_ids:
+            config = config_manager.get_config(vertical_id)
+            if config:
+                verticals.append({
+                    "vertical_id": vertical_id,
+                    "vertical_name": config.vertical_name
+                })
+            else:
+                # Fallback for missing config
+                verticals.append({
+                    "vertical_id": vertical_id,
+                    "vertical_name": vertical_id.replace("_", " ").title()
+                })
+        
+        # Ensure at least default verticals
+        if not verticals:
+            verticals = [
+                {"vertical_id": "restaurant_v1", "vertical_name": "Restaurant Operations"},
+                {"vertical_id": "general_v1", "vertical_name": "General Operating Business"}
+            ]
+        
+        return {"verticals": verticals}
+    except Exception as e:
+        # Return fallback on any error
+        import traceback
+        print(f"ERROR in list_verticals: {e}")
+        traceback.print_exc()
+        return {
+            "verticals": [
+                {"vertical_id": "restaurant_v1", "vertical_name": "Restaurant Operations"},
+                {"vertical_id": "general_v1", "vertical_name": "General Operating Business"}
+            ]
+        }

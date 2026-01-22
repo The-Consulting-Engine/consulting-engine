@@ -67,6 +67,9 @@ function RunPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [waitingForApproval, setWaitingForApproval] = useState(false)
   const [error, setError] = useState('')
+  const [dragActive, setDragActive] = useState(false)
+  const [mappingSuccess, setMappingSuccess] = useState(false)
+  const [mappedUploadIds, setMappedUploadIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadRun()
@@ -102,6 +105,9 @@ function RunPage() {
     try {
       const data = await getMappings(Number(runId))
       setConfirmedMappingsCount(data.mappings.length)
+      // Track which uploads have mappings
+      const mappedIds = new Set(data.mappings.map((m: any) => m.upload_id))
+      setMappedUploadIds(mappedIds)
     } catch (err) {
       console.error('Failed to load mappings:', err)
     }
@@ -144,16 +150,22 @@ function RunPage() {
 
     try {
       setError('')
+      setMappingSuccess(false)
       await confirmMappings(Number(runId), {
         upload_id: currentUpload.upload_id,
         mappings: suggestedMappings,
       })
+      setMappingSuccess(true)
       setSuggestedMappings([])
       setCurrentUpload(null)
       await loadRun()
       await loadConfirmedMappings()
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setMappingSuccess(false), 3000)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to confirm mappings')
+      setMappingSuccess(false)
     }
   }
 
@@ -219,8 +231,14 @@ function RunPage() {
         </Stepper>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}
+          </Alert>
+        )}
+
+        {mappingSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMappingSuccess(false)}>
+            Mappings confirmed successfully! You can now upload more files or start analysis.
           </Alert>
         )}
 
@@ -244,30 +262,74 @@ function RunPage() {
                 </Select>
               </FormControl>
 
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<CloudUpload />}
+              {/* Drag and Drop Zone */}
+              <Box
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'))
+                  if (files.length > 0) {
+                    setSelectedFile(files[0])
+                    setDragActive(false)
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragActive(true)
+                }}
+                onDragLeave={() => setDragActive(false)}
+                sx={{
+                  border: '2px dashed',
+                  borderColor: dragActive ? 'primary.main' : 'grey.300',
+                  borderRadius: 2,
+                  p: 4,
+                  textAlign: 'center',
+                  bgcolor: dragActive ? 'action.hover' : 'background.paper',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover'
+                  }
+                }}
               >
-                Choose CSV File
+                <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Drag & Drop CSV File Here
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  or click to browse
+                </Typography>
                 <input
                   type="file"
                   hidden
                   accept=".csv"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  id="file-upload"
                 />
-              </Button>
+                <label htmlFor="file-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<CloudUpload />}
+                  >
+                    Choose CSV File
+                  </Button>
+                </label>
+              </Box>
 
               {selectedFile && (
-                <Typography variant="body2">
-                  Selected: {selectedFile.name}
-                </Typography>
+                <Alert severity="info" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2">
+                    Selected: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </Typography>
+                </Alert>
               )}
 
               <Button
                 variant="contained"
                 onClick={handleUpload}
                 disabled={!selectedFile || uploading}
+                size="large"
               >
                 {uploading ? 'Uploading...' : 'Upload File'}
               </Button>
@@ -275,9 +337,16 @@ function RunPage() {
 
             {uploads.length > 0 && (
               <>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Uploaded Files
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    Uploaded Files
+                  </Typography>
+                  <Chip 
+                    label={`${mappedUploadIds.size} of ${uploads.length} mapped`}
+                    color={mappedUploadIds.size === uploads.length ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Box>
 
                 <TableContainer>
                   <Table>
@@ -291,27 +360,50 @@ function RunPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {uploads.map((upload) => (
-                        <TableRow key={upload.upload_id}>
-                          <TableCell>{upload.filename}</TableCell>
-                          <TableCell>
-                            <Chip label={upload.pack_type} size="small" />
-                          </TableCell>
-                          <TableCell>{upload.row_count}</TableCell>
-                          <TableCell>
-                            {Object.keys(upload.column_profile.columns).length}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="small"
-                              onClick={() => handleSuggestMappings(upload)}
-                              disabled={loadingMappings}
-                            >
-                              Map Columns
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {uploads.map((upload) => {
+                        const isMapped = mappedUploadIds.has(upload.upload_id)
+                        return (
+                          <TableRow 
+                            key={upload.upload_id}
+                            sx={{
+                              bgcolor: isMapped ? 'success.light' : 'transparent',
+                              '&:hover': { bgcolor: 'action.hover' }
+                            }}
+                          >
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {upload.filename}
+                                {isMapped && (
+                                  <Chip 
+                                    label="Mapped" 
+                                    size="small" 
+                                    color="success" 
+                                    icon={<CheckCircle />}
+                                  />
+                                )}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={upload.pack_type} size="small" />
+                            </TableCell>
+                            <TableCell>{upload.row_count}</TableCell>
+                            <TableCell>
+                              {Object.keys(upload.column_profile?.columns || {}).length}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                variant={isMapped ? "outlined" : "contained"}
+                                onClick={() => handleSuggestMappings(upload)}
+                                disabled={loadingMappings}
+                                startIcon={isMapped ? <CheckCircle /> : undefined}
+                              >
+                                {isMapped ? 'Remap' : 'Map Columns'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -322,35 +414,74 @@ function RunPage() {
 
         {activeStep === 1 && suggestedMappings.length > 0 && (
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Confirm Column Mappings
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Review & Confirm Column Mappings
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              File: {currentUpload?.filename}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              File: <strong>{currentUpload?.filename}</strong> • {currentUpload?.row_count} rows
             </Typography>
+
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Review the suggested mappings below. The system has automatically matched your columns to canonical fields.
+              {suggestedMappings.filter(m => m.confidence < 0.8).length > 0 && (
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  ⚠️ Some mappings have lower confidence - please verify these carefully.
+                </Typography>
+              )}
+            </Alert>
 
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Canonical Field</TableCell>
-                    <TableCell>Source Columns</TableCell>
-                    <TableCell>Transform</TableCell>
-                    <TableCell>Confidence</TableCell>
+                    <TableCell><strong>Canonical Field</strong></TableCell>
+                    <TableCell><strong>Source Columns</strong></TableCell>
+                    <TableCell><strong>Transform</strong></TableCell>
+                    <TableCell><strong>Confidence</strong></TableCell>
+                    <TableCell><strong>Reasoning</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {suggestedMappings.map((mapping, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{mapping.canonical_field}</TableCell>
-                      <TableCell>{mapping.source_columns.join(', ')}</TableCell>
-                      <TableCell>{mapping.transform}</TableCell>
+                    <TableRow 
+                      key={idx}
+                      sx={{
+                        bgcolor: mapping.confidence < 0.5 ? 'error.light' : 
+                                mapping.confidence < 0.8 ? 'warning.light' : 'success.light',
+                        '&:hover': { bgcolor: 'action.hover' }
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {mapping.canonical_field}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={mapping.source_columns.join(', ') || 'None'} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption">
+                          {mapping.transform || 'none'}
+                        </Typography>
+                      </TableCell>
                       <TableCell>
                         <Chip
                           label={`${(mapping.confidence * 100).toFixed(0)}%`}
                           size="small"
-                          color={mapping.confidence > 0.8 ? 'success' : 'warning'}
+                          color={
+                            mapping.confidence >= 0.8 ? 'success' : 
+                            mapping.confidence >= 0.5 ? 'warning' : 'error'
+                          }
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">
+                          {mapping.reasoning || 'No reasoning provided'}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -358,12 +489,23 @@ function RunPage() {
               </Table>
             </TableContainer>
 
-            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-              <Button variant="contained" onClick={handleConfirmMappings} startIcon={<CheckCircle />}>
-                Confirm Mappings
-              </Button>
-              <Button variant="outlined" onClick={() => setSuggestedMappings([])}>
+            <Box sx={{ display: 'flex', gap: 2, mt: 3, justifyContent: 'flex-end' }}>
+              <Button 
+                variant="outlined" 
+                onClick={() => {
+                  setSuggestedMappings([])
+                  setCurrentUpload(null)
+                }}
+              >
                 Cancel
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={handleConfirmMappings} 
+                startIcon={<CheckCircle />}
+                size="large"
+              >
+                Confirm {suggestedMappings.length} Mapping{suggestedMappings.length !== 1 ? 's' : ''}
               </Button>
             </Box>
           </Paper>
