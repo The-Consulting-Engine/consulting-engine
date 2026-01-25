@@ -8,7 +8,7 @@ from app.db.session import get_db
 from app.db.models import (
     Cycle, QuestionnaireResponse, CategoryScore, Initiative, CycleStatus, InitiativeKind
 )
-from app.generation.category_scoring import score_categories, select_top_5_categories
+from app.generation.category_scoring import score_categories, select_top_4_categories
 from app.generation.initiative_expansion import expand_core_initiatives, generate_sandbox_initiatives
 
 router = APIRouter()
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 @router.post("/cycles/{cycle_id}/generate")
 def generate_cycle(cycle_id: str, db: Session = Depends(get_db)):
     """Generate initiatives for a cycle."""
-    logger.info("Generate started for cycle %s", cycle_id)
+    logger.info("=" * 80)
+    logger.info("Generate STARTED for cycle %s", cycle_id)
+    logger.info("=" * 80)
     try:
         cycle_uuid = uuid.UUID(cycle_id)
     except ValueError:
@@ -47,11 +49,13 @@ def generate_cycle(cycle_id: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Derived signals are missing")
         
         # Step 1: Score categories
+        logger.info("Step 1/4: Scoring categories for cycle %s", cycle_id)
         category_scores = score_categories(
             qr.responses,
             qr.derived_signals,
             cycle.vertical_id
         )
+        logger.info("Step 1/4 complete: Got %d category scores", len(category_scores) if category_scores else 0)
         
         if not category_scores or len(category_scores) != 10:
             raise ValueError(f"Expected 10 category scores, got {len(category_scores) if category_scores else 0}")
@@ -63,22 +67,26 @@ def generate_cycle(cycle_id: str, db: Session = Depends(get_db)):
         )
         db.add(db_category_scores)
         
-        # Step 2: Select top 5
-        top_5_ids = select_top_5_categories(category_scores)
+        # Step 2: Select top 4
+        logger.info("Step 2/4: Selecting top 4 categories for cycle %s", cycle_id)
+        top_4_ids = select_top_4_categories(category_scores)
+        logger.info("Step 2/4 complete: Selected categories %s", top_4_ids)
         
-        if not top_5_ids or len(top_5_ids) != 5:
-            raise ValueError(f"Expected 5 top categories, got {len(top_5_ids) if top_5_ids else 0}")
+        if not top_4_ids or len(top_4_ids) != 4:
+            raise ValueError(f"Expected 4 top categories, got {len(top_4_ids) if top_4_ids else 0}")
         
         # Step 3: Expand core initiatives
+        logger.info("Step 3/4: Expanding core initiatives for cycle %s", cycle_id)
         core_initiatives = expand_core_initiatives(
             qr.responses,
             qr.derived_signals,
-            top_5_ids,
+            top_4_ids,
             cycle.vertical_id
         )
+        logger.info("Step 3/4 complete: Got %d core initiatives", len(core_initiatives) if core_initiatives else 0)
         
-        if not core_initiatives or len(core_initiatives) != 5:
-            raise ValueError(f"Expected 5 core initiatives, got {len(core_initiatives) if core_initiatives else 0}")
+        if not core_initiatives or len(core_initiatives) != 4:
+            raise ValueError(f"Expected 4 core initiatives, got {len(core_initiatives) if core_initiatives else 0}")
         
         # Save core initiatives
         for idx, init in enumerate(core_initiatives):
@@ -94,14 +102,17 @@ def generate_cycle(cycle_id: str, db: Session = Depends(get_db)):
             db.add(db_init)
         
         # Step 4: Generate sandbox
+        logger.info("Step 4/4: Generating sandbox initiatives for cycle %s", cycle_id)
         sandbox_initiatives = generate_sandbox_initiatives(
             qr.responses,
             qr.derived_signals,
-            top_5_ids
+            top_4_ids,
+            cycle.vertical_id,
         )
+        logger.info("Step 4/4 complete: Got %d sandbox initiatives", len(sandbox_initiatives) if sandbox_initiatives else 0)
         
-        if not sandbox_initiatives or len(sandbox_initiatives) != 2:
-            raise ValueError(f"Expected 2 sandbox initiatives, got {len(sandbox_initiatives) if sandbox_initiatives else 0}")
+        if not sandbox_initiatives or len(sandbox_initiatives) != 3:
+            raise ValueError(f"Expected 3 sandbox initiatives, got {len(sandbox_initiatives) if sandbox_initiatives else 0}")
         
         # Save sandbox initiatives
         for idx, init in enumerate(sandbox_initiatives):
@@ -120,7 +131,21 @@ def generate_cycle(cycle_id: str, db: Session = Depends(get_db)):
         cycle.status = CycleStatus.GENERATED
         db.commit()
 
+        # Check if any results look like placeholders (mock was used)
+        has_placeholders = (
+            any("placeholder" in str(init.get("title", "")).lower() for init in core_initiatives) or
+            any("placeholder" in str(init.get("title", "")).lower() for init in sandbox_initiatives)
+        )
+        
+        if has_placeholders:
+            logger.warning("⚠️  GENERATION COMPLETE but used MOCK/PLACEHOLDER data (LLM failed or provider=mock)")
+        else:
+            logger.info("✅ GENERATION COMPLETE - All data from REAL LLM (not mock)")
+        
+        logger.info("=" * 80)
         logger.info("Generate completed for cycle %s", cycle_id)
+        logger.info("=" * 80)
+        
         return {
             "status": "generated",
             "cycle_id": cycle_id,

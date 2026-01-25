@@ -48,10 +48,10 @@ export default function ResultsPage() {
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
       <h1 style={{ marginBottom: '30px' }}>Profit Reset Results</h1>
 
-      {/* Top 5 Core Initiatives */}
+      {/* Top 4 Core Initiatives */}
       <section style={{ marginBottom: '40px' }}>
         <h2 style={{ marginBottom: '20px', fontSize: '1.8rem', borderBottom: '3px solid #007bff', paddingBottom: '10px' }}>
-          Top 5 Core Initiatives
+          Top 4 Core Initiatives
         </h2>
         {results.core_initiatives && results.core_initiatives.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

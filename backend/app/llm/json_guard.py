@@ -57,28 +57,40 @@ def get_mock_data(schema_name: str) -> Any:
             {"category_id": "delivery_ops", "score": 55, "confidence": 0.55, "rationale": "Delivery operations"}
         ]
     elif schema_name == "core_initiatives":
-        return [
-            {
-                "category_id": "labor_scheduling",
-                "title": "Tighten labor schedules",
-                "why_now": "Labor scheduling issues identified",
-                "steps": ["Review schedules", "Adjust staffing", "Monitor results"],
-                "how_to_measure": ["Track hours", "Monitor coverage"],
-                "assumptions": ["Data available"],
-                "confidence_label": "MEDIUM"
-            }
-        ] * 5
+        # Placeholder initiatives - clearly marked so user knows LLM failed
+        placeholder = {
+            "category_id": "placeholder",
+            "title": "PLACEHOLDER: Core Initiative (LLM generation failed)",
+            "why_now": "This is a placeholder. The LLM failed to generate real initiatives. Check backend logs for errors.",
+            "steps": [
+                "PLACEHOLDER: Real steps will appear when LLM generation succeeds"
+            ],
+            "how_to_measure": [
+                "PLACEHOLDER: Real measurement methods will appear when LLM generation succeeds"
+            ],
+            "assumptions": [
+                "PLACEHOLDER: Real assumptions will appear when LLM generation succeeds"
+            ],
+            "confidence_label": "LOW"
+        }
+        return [placeholder] * 4
     elif schema_name == "sandbox_initiatives":
-        return [
-            {
-                "title": "Test new approach",
-                "why_this_came_up": "Opportunity identified",
-                "why_speculative": "Needs testing",
-                "test_plan": ["Plan step 1", "Plan step 2", "Plan step 3"],
-                "stop_conditions": ["Condition 1"],
-                "how_to_measure": ["Measure 1", "Measure 2"],
-                "confidence_label": "LOW"
-            }
-        ] * 2
+        # Placeholder initiatives - clearly marked so user knows LLM failed
+        placeholder = {
+            "title": "PLACEHOLDER: Sandbox Experiment (LLM generation failed)",
+            "why_this_came_up": "This is a placeholder. The LLM failed to generate real sandbox experiments. Check backend logs for errors.",
+            "why_speculative": "PLACEHOLDER: Real speculative reasoning will appear when LLM generation succeeds.",
+            "test_plan": [
+                "PLACEHOLDER: Real test plan will appear when LLM generation succeeds"
+            ],
+            "stop_conditions": [
+                "PLACEHOLDER: Real stop conditions will appear when LLM generation succeeds"
+            ],
+            "how_to_measure": [
+                "PLACEHOLDER: Real measurement methods will appear when LLM generation succeeds"
+            ],
+            "confidence_label": "LOW"
+        }
+        return [placeholder] * 3
     else:
         return []

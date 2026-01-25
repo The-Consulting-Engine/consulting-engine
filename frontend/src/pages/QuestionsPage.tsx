@@ -83,13 +83,15 @@ export default function QuestionsPage() {
       await api.saveQuestionnaire(cycleId, responses);
       
       // Generate results (with timeout; 4 LLM steps can take 60–90s with OpenAI)
+      console.log('Starting generation for cycle:', cycleId);
       const generatePromise = api.generate(cycleId);
       const timeoutMs = 90_000;
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Generation timed out after ${timeoutMs / 1000} seconds`)), timeoutMs)
+        setTimeout(() => reject(new Error(`Generation timed out after ${timeoutMs / 1000} seconds. Check backend logs for details.`)), timeoutMs)
       );
 
-      await Promise.race([generatePromise, timeoutPromise]);
+      const result = await Promise.race([generatePromise, timeoutPromise]);
+      console.log('Generation completed:', result);
       
       // Navigate to results
       navigate(`/cycles/${cycleId}/results`);
@@ -97,6 +99,8 @@ export default function QuestionsPage() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process questionnaire';
       setError(errorMessage);
       console.error('Questionnaire submission error:', err);
+      // Ensure saving state is cleared even on error
+      setSaving(false);
     } finally {
       setSaving(false);
     }
@@ -283,8 +287,14 @@ export default function QuestionsPage() {
             fontWeight: 'bold',
           }}
         >
-          {saving ? 'Generating...' : 'Submit & Generate Results'}
+          {saving ? 'Generating... (this may take 30-90 seconds)' : 'Submit & Generate Results'}
         </button>
+        
+        {saving && (
+          <div style={{ marginTop: '15px', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>
+            Generating initiatives... Check browser console (F12) for progress or errors.
+          </div>
+        )}
       </div>
     </div>
   );

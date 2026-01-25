@@ -17,11 +17,22 @@ def score_categories(
     prompt = build_category_scoring_prompt(
         questionnaire_responses,
         derived_signals,
-        categories
+        categories,
+        vertical_id=vertical_id,
     )
     
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("📊 Step 1: Calling LLM for category scoring...")
     client = LLMClient()
     response = client.generate(prompt, json_mode=True)
+    
+    # Check if response looks like mock (placeholder) vs real LLM
+    is_mock = "placeholder" in response.lower() or response.strip() == "{}"
+    if is_mock:
+        logger.warning("⚠️  Category scoring used MOCK data (not real LLM)")
+    else:
+        logger.info("✅ Category scoring used REAL LLM response (length: %d chars)", len(response) if response else 0)
     
     # Clean response if it's wrapped in markdown code blocks
     if response.strip().startswith('```'):
@@ -38,7 +49,7 @@ def score_categories(
     return scores
 
 
-def select_top_5_categories(scores: List[Dict[str, Any]]) -> List[str]:
-    """Select top 5 categories by score."""
+def select_top_4_categories(scores: List[Dict[str, Any]]) -> List[str]:
+    """Select top 4 categories by score."""
     sorted_scores = sorted(scores, key=lambda x: x["score"], reverse=True)
-    return [s["category_id"] for s in sorted_scores[:5]]
+    return [s["category_id"] for s in sorted_scores[:4]]

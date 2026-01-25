@@ -1,10 +1,51 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
+
+def _multi_select_schema(vertical_id: str) -> Dict[str, List[str]]:
+    """Load questionnaire and return q_id -> options for multi_select questions."""
+    from app.questionnaire.loader import load_questionnaire
+    q = load_questionnaire(vertical_id)
+    out: Dict[str, List[str]] = {}
+    for sec in q.get("sections", []):
+        for qn in sec.get("questions", []):
+            if qn.get("type") == "multi_select" and qn.get("options"):
+                out[qn["id"]] = list(qn["options"])
+    return out
+
+
+def format_responses_for_prompt(
+    responses: Dict[str, Any],
+    vertical_id: Optional[str] = None,
+) -> str:
+    """Format questionnaire responses for LLM prompt.
+    For multi_select questions, includes both selected and not selected options when
+    vertical_id is provided (not selected is often as important, e.g. marketing channels not used).
+    """
+    multi_opts = _multi_select_schema(vertical_id) if vertical_id else {}
+    lines = []
+    for q_id, value in responses.items():
+        opts = multi_opts.get(q_id)
+        if opts is not None:
+            selected = value if isinstance(value, list) else ([value] if value is not None else [])
+            selected = [str(s).strip() for s in selected if s is not None and str(s).strip()]
+            not_selected = [o for o in opts if o not in selected]
+            sel_str = ", ".join(selected) if selected else "(none)"
+            not_str = ", ".join(not_selected) if not_selected else "(none)"
+            lines.append(f"{q_id}: selected: {sel_str}; not selected: {not_str}")
+        else:
+            if isinstance(value, list):
+                value_str = ", ".join(str(v) for v in value)
+            else:
+                value_str = str(value)
+            lines.append(f"{q_id}: {value_str}")
+    return "\n".join(lines)
 
 
 def build_category_scoring_prompt(
     questionnaire_responses: Dict[str, Any],
     derived_signals: Dict[str, Any],
-    categories: List[Dict[str, str]]
+    categories: List[Dict[str, str]],
+    vertical_id: str = "restaurant_v0_1",
 ) -> str:
     """Build prompt for scoring the 10 categories."""
     categories_text = "\n".join([
@@ -20,8 +61,8 @@ def build_category_scoring_prompt(
 CATEGORIES (you may ONLY score from this list):
 {categories_text}
 
-QUESTIONNAIRE RESPONSES:
-{format_responses_for_prompt(questionnaire_responses)}
+QUESTIONNAIRE RESPONSES (for multi-select, both "selected" and "not selected" are shown; not selected is often as important, e.g. marketing channels they don't use):
+{format_responses_for_prompt(questionnaire_responses, vertical_id)}
 
 DERIVED SIGNALS:
 Flags: {flags_text}
@@ -48,9 +89,10 @@ def build_core_initiative_expansion_prompt(
     questionnaire_responses: Dict[str, Any],
     derived_signals: Dict[str, Any],
     selected_category_ids: List[str],
-    categories: List[Dict[str, str]]
+    categories: List[Dict[str, str]],
+    vertical_id: str = "restaurant_v0_1",
 ) -> str:
-    """Build prompt for expanding top 5 categories into core initiatives."""
+    """Build prompt for expanding top 4 categories into core initiatives."""
     selected_categories = [c for c in categories if c["id"] in selected_category_ids]
     categories_text = "\n".join([
         f"- {cat['id']}: {cat['label']} - {cat['description']}"
@@ -61,20 +103,20 @@ def build_core_initiative_expansion_prompt(
     constraints = [f for f in derived_signals.get("flags", []) if f.startswith("constraint_")]
     constraints_text = ", ".join(constraints) if constraints else "None"
     
-    return f"""You are expanding the top 5 selected categories into concrete, operator-friendly core initiatives.
+    return f"""You are expanding the top 4 selected categories into concrete, operator-friendly core initiatives.
 
 SELECTED CATEGORIES (create 1 initiative per category):
 {categories_text}
 
-QUESTIONNAIRE RESPONSES:
-{format_responses_for_prompt(questionnaire_responses)}
+QUESTIONNAIRE RESPONSES (for multi-select, both "selected" and "not selected" are shown; not selected is often as important, e.g. marketing channels they don't use):
+{format_responses_for_prompt(questionnaire_responses, vertical_id)}
 
 DERIVED SIGNALS:
 Flags: {flags_text}
 Constraints: {constraints_text}
 
 TASK:
-Create exactly 5 core initiatives, one per selected category. Each initiative must include:
+Create exactly 4 core initiatives, one per selected category. Each initiative must include:
 - category_id (from selected categories)
 - title (clear, action-oriented)
 - why_now (cite questionnaire context with question IDs)
@@ -89,7 +131,7 @@ RULES:
 - Include measurement that can be tracked manually
 - NO numbers, NO money, NO percentages
 - If constraints include constraint_no_pricing_control, avoid pricing change initiatives or frame as validation only
-- Return JSON array with exactly 5 entries
+- Return JSON array with exactly 4 entries
 
 Return only valid JSON array."""
 
@@ -97,15 +139,16 @@ Return only valid JSON array."""
 def build_sandbox_prompt(
     questionnaire_responses: Dict[str, Any],
     derived_signals: Dict[str, Any],
-    selected_category_ids: List[str]
+    selected_category_ids: List[str],
+    vertical_id: str = "restaurant_v0_1",
 ) -> str:
-    """Build prompt for generating exactly 2 sandbox experiments."""
+    """Build prompt for generating exactly 3 sandbox experiments."""
     flags_text = ", ".join(derived_signals.get("flags", []))
     
-    return f"""You are generating exactly 2 sandbox/experimental initiatives that may not fit the core categories.
+    return f"""You are generating exactly 3 sandbox/experimental initiatives that may not fit the core categories.
 
-QUESTIONNAIRE RESPONSES:
-{format_responses_for_prompt(questionnaire_responses)}
+QUESTIONNAIRE RESPONSES (for multi-select, both "selected" and "not selected" are shown; not selected is often as important, e.g. marketing channels they don't use):
+{format_responses_for_prompt(questionnaire_responses, vertical_id)}
 
 DERIVED SIGNALS:
 Flags: {flags_text}
@@ -114,7 +157,7 @@ SELECTED CORE CATEGORIES (avoid redundancy):
 {', '.join(selected_category_ids)}
 
 TASK:
-Generate exactly 2 sandbox experiments that:
+Generate exactly 3 sandbox experiments that:
 - May not fit the core categories
 - Are clearly speculative
 - Are reversible in 30 days
@@ -130,23 +173,11 @@ Each sandbox must include:
 - confidence_label (must be LOW)
 
 RULES:
-- Exactly 2 sandbox initiatives
+- Exactly 3 sandbox initiatives
 - Must be clearly speculative
 - Must be reversible in 30 days
 - Must include stop conditions
 - NO numbers, money, or percent
-- Return JSON array with exactly 2 entries
+- Return JSON array with exactly 3 entries
 
 Return only valid JSON array."""
-
-
-def format_responses_for_prompt(responses: Dict[str, Any]) -> str:
-    """Format questionnaire responses for LLM prompt."""
-    lines = []
-    for q_id, value in responses.items():
-        if isinstance(value, list):
-            value_str = ", ".join(str(v) for v in value)
-        else:
-            value_str = str(value)
-        lines.append(f"{q_id}: {value_str}")
-    return "\n".join(lines)
