@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -17,40 +15,36 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  api:
     build:
       context: ./backend
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/consulting_engine
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: gpt-4-turbo-preview
-      DEBUG: "true"
-      UPLOAD_DIR: /app/uploads
-      REPORTS_DIR: /app/reports
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_API_KEY: ${LLM_API_KEY:-}
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend/app:/app/app
-      - backend_uploads:/app/uploads
-      - backend_reports:/app/reports
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  frontend:
+  web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "5173:5173"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-    depends_on:
-      - backend
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      # Browser calls API directly at localhost:8000 (both port-mapped to host). No proxy.
+      - VITE_API_URL=http://localhost:8000
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres_data:
-  backend_uploads:
-  backend_reports:

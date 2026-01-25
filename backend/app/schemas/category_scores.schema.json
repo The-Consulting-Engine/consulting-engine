@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "minItems": 10,
+  "maxItems": 10,
+  "items": {
+    "type": "object",
+    "required": ["category_id", "score", "confidence", "rationale"],
+    "properties": {
+      "category_id": {
+        "type": "string",
+        "enum": [
+          "labor_scheduling",
+          "service_speed",
+          "manager_cadence",
+          "training_consistency",
+          "menu_simplicity",
+          "discounting_discipline",
+          "upsell_attachment",
+          "marketing_ownership",
+          "local_search",
+          "delivery_ops"
+        ]
+      },
+      "score": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "confidence": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "rationale": {
+        "type": "string"
+      }
+    }
+  }
+}

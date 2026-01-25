@@ -1,120 +1,134 @@
-import axios from 'axios'
+// Use VITE_API_URL when set (e.g. Docker: http://localhost:8000). Else relative URLs ('' = Vite proxy) in dev.
+const API_URL =
+  import.meta.env.VITE_API_URL && String(import.meta.env.VITE_API_URL).trim() !== ''
+    ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '')
+    : import.meta.env.DEV
+      ? ''
+      : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000');
 
-const API_BASE = '/api'
-
-export const api = axios.create({
-  baseURL: API_BASE,
-})
-
-// Runs
-export const createRun = async (data: { vertical_id: string; company_name?: string; notes?: string }) => {
-  const response = await api.post('/runs/', data)
-  return response.data
+export interface Organization {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
-export const getRun = async (runId: number) => {
-  const response = await api.get(`/runs/${runId}`)
-  return response.data
+export interface Cycle {
+  id: string;
+  org_id: string;
+  vertical_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export const deleteRun = async (runId: number) => {
-  const response = await api.delete(`/runs/${runId}`)
-  return response.data
+export interface Questionnaire {
+  schema_version: string;
+  vertical_id: string;
+  title: string;
+  description: string;
+  sections: QuestionnaireSection[];
 }
 
-export const listRuns = async () => {
-  const response = await api.get('/runs/')
-  return response.data
+export interface QuestionnaireSection {
+  id: string;
+  title: string;
+  questions: Question[];
 }
 
-export const listVerticals = async () => {
-  const response = await api.get('/runs/verticals/list')
-  return response.data
+export interface Question {
+  id: string;
+  label: string;
+  type: 'single_select' | 'multi_select' | 'likert_1_5' | 'short_text' | 'long_text';
+  required: boolean;
+  options?: string[];
+  max_selected?: number;
+  max_chars?: number;
+  min_label?: string;
+  max_label?: string;
 }
 
-// Uploads
-export const uploadFile = async (runId: number, packType: string, file: File) => {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('pack_type', packType)
-  
-  const response = await api.post(`/uploads/${runId}/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  })
-  return response.data
+export interface Results {
+  cycle_id: string;
+  status: string;
+  category_scores: any[];
+  core_initiatives: Initiative[];
+  sandbox_initiatives: Initiative[];
 }
 
-export const listUploads = async (runId: number) => {
-  const response = await api.get(`/uploads/${runId}/uploads`)
-  return response.data
+export interface Initiative {
+  id: string;
+  title: string;
+  body: any;
+  rank: number;
 }
 
-export const suggestMappings = async (runId: number, uploadId: number) => {
-  const response = await api.post(`/uploads/${runId}/uploads/${uploadId}/suggest-mappings`)
-  return response.data
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const base = API_URL || '';
+  const url = base ? `${base}${endpoint}` : endpoint;
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  } catch (err) {
+    if (err instanceof TypeError && err.message === 'Failed to fetch') {
+      const hint = base ? ` at ${base}` : ' (same origin)';
+      throw new Error(`Could not connect to API${hint} Is the backend running? Try "make up" or "docker-compose up".`);
+    }
+    throw err;
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    const msg = typeof error?.detail === 'string'
+      ? error.detail
+      : Array.isArray(error?.detail)
+        ? error.detail.map((e: { msg?: string }) => e?.msg).filter(Boolean).join('; ') || response.statusText
+        : error?.detail ?? response.statusText;
+    throw new Error(String(msg || `HTTP error! status: ${response.status}`));
+  }
+
+  return response.json();
 }
 
-// Mappings
-export const confirmMappings = async (runId: number, data: any) => {
-  const response = await api.post(`/mappings/${runId}/confirm`, data)
-  return response.data
-}
+export const api = {
+  createOrg: (name: string) =>
+    request<Organization>('/api/orgs', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
 
-export const getMappings = async (runId: number) => {
-  const response = await api.get(`/mappings/${runId}/mappings`)
-  return response.data
-}
+  getOrg: (orgId: string) =>
+    request<Organization>(`/api/orgs/${orgId}`),
 
-// Analytics
-export const analyzeRun = async (runId: number) => {
-  const response = await api.post(`/analytics/${runId}/analyze`)
-  return response.data
-}
+  createCycle: (orgId: string) =>
+    request<Cycle>('/api/cycles', {
+      method: 'POST',
+      body: JSON.stringify({ org_id: orgId }),
+    }),
 
-export const getResults = async (runId: number) => {
-  const response = await api.get(`/analytics/${runId}/results`)
-  return response.data
-}
+  getCycle: (cycleId: string) =>
+    request<Cycle>(`/api/cycles/${cycleId}`),
 
-// Reports
-export const generateMemo = async (runId: number) => {
-  const response = await api.post(`/reports/${runId}/generate-memo`)
-  return response.data
-}
+  getQuestionnaire: (cycleId: string) =>
+    request<Questionnaire>(`/api/cycles/${cycleId}/questionnaire`),
 
-export const generateDeck = async (runId: number) => {
-  const response = await api.post(`/reports/${runId}/generate-deck`)
-  return response.data
-}
+  saveQuestionnaire: (cycleId: string, responses: Record<string, any>) =>
+    request(`/api/cycles/${cycleId}/questionnaire`, {
+      method: 'POST',
+      body: JSON.stringify({ responses }),
+    }),
 
-export const listReports = async (runId: number) => {
-  const response = await api.get(`/reports/${runId}/reports`)
-  return response.data
-}
+  generate: (cycleId: string) =>
+    request(`/api/cycles/${cycleId}/generate`, {
+      method: 'POST',
+    }),
 
-export const downloadReport = (reportId: number) => {
-  return `${API_BASE}/reports/download/${reportId}`
-}
-
-// Questions
-export const getQuestions = async (runId: number) => {
-  const response = await api.get(`/questions/${runId}/questions`)
-  return response.data
-}
-
-export const saveResponses = async (runId: number, responses: any[]) => {
-  const response = await api.post(`/questions/${runId}/responses`, { responses })
-  return response.data
-}
-
-export const getResponses = async (runId: number) => {
-  const response = await api.get(`/questions/${runId}/responses`)
-  return response.data
-}
-
-export const getContext = async (runId: number) => {
-  const response = await api.get(`/questions/${runId}/context`)
-  return response.data
-}
+  getResults: (cycleId: string) =>
+    request<Results>(`/api/cycles/${cycleId}/results`),
+};
