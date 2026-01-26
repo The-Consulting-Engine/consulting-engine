@@ -26,6 +26,7 @@ class ApifyScraper:
         "google_reviews": "compass~google-maps-reviews-scraper",
         "yelp": "yin~yelp-scraper",
         "tripadvisor": "maxcopell~tripadvisor-scraper",
+        "uber_eats": "borderline~uber-eats-scraper-ppr",
     }
 
     def __init__(self, api_token: Optional[str] = None):
@@ -222,6 +223,150 @@ class ApifyScraper:
         await asyncio.gather(*[enrich_one(c) for c in competitors])
 
         return results
+
+    async def scrape_ubereats_menu(
+        self,
+        restaurant_name: str,
+        address: str,
+    ) -> dict:
+        """
+        Scrape Uber Eats menu and pricing data for a restaurant.
+
+        Args:
+            restaurant_name: Name of the restaurant
+            address: Full address or city/state for location context
+
+        Returns:
+            Dict with menu items, prices, and restaurant info from Uber Eats
+        """
+        # Input format for borderline~uber-eats-scraper-ppr
+        input_data = {
+            "query": restaurant_name,
+            "address": address,
+            "locale": "en-US",
+            "maxRows": 1,  # Just need the one restaurant
+        }
+
+        print(f"  Scraping Uber Eats for: {restaurant_name}")
+        results = await self._run_actor(self.ACTORS["uber_eats"], input_data)
+
+        if not results:
+            return {
+                "source": "uber_eats",
+                "found": False,
+                "restaurant_name": restaurant_name,
+                "menu_items": [],
+                "price_range": None,
+            }
+
+        # Parse the first result (the matched restaurant)
+        return self._parse_ubereats_result(results[0] if results else {}, restaurant_name)
+
+    async def scrape_ubereats_batch(
+        self,
+        competitors: list[GooglePlaceResult],
+        max_concurrent: int = 3,
+    ) -> dict[str, dict]:
+        """
+        Scrape Uber Eats menu data for multiple competitors.
+
+        Args:
+            competitors: List of GooglePlaceResults from discovery
+            max_concurrent: Max concurrent Apify jobs
+
+        Returns:
+            Dict mapping place_id to Uber Eats menu data
+        """
+        results = {}
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def scrape_one(competitor: GooglePlaceResult):
+            async with semaphore:
+                try:
+                    data = await self.scrape_ubereats_menu(
+                        restaurant_name=competitor.name,
+                        address=competitor.address,
+                    )
+                    results[competitor.place_id] = data
+                except Exception as e:
+                    print(f"  Failed to scrape Uber Eats for {competitor.name}: {e}")
+                    results[competitor.place_id] = {
+                        "source": "uber_eats",
+                        "found": False,
+                        "restaurant_name": competitor.name,
+                        "error": str(e),
+                    }
+
+        await asyncio.gather(*[scrape_one(c) for c in competitors])
+        return results
+
+    def _parse_ubereats_result(self, item: dict, restaurant_name: str) -> dict:
+        """Parse Uber Eats scraper result into structured menu data."""
+        # Extract menu items with prices
+        # Menu structure: list of categories, each with catalogItems
+        menu_items = []
+        raw_menu = item.get("menu") or []
+
+        for category in raw_menu:
+            category_name = category.get("catalogName") or "Other"
+            catalog_items = category.get("catalogItems") or []
+
+            for menu_item in catalog_items:
+                # Price is in cents, priceTagline is formatted (e.g., "$11.69")
+                price = menu_item.get("priceTagline") or menu_item.get("price")
+                if isinstance(price, int):
+                    price = f"${price / 100:.2f}"
+
+                parsed_item = {
+                    "name": menu_item.get("title") or menu_item.get("titleBadge") or "",
+                    "description": menu_item.get("itemDescription") or "",
+                    "price": price,
+                    "category": category_name,
+                    "image_url": menu_item.get("imageUrl"),
+                    "is_available": menu_item.get("isAvailable", True),
+                }
+                if parsed_item["name"]:
+                    menu_items.append(parsed_item)
+
+        # Parse rating - can be a dict like {'ratingValue': 4.7, 'reviewCount': '700+'}
+        rating_data = item.get("rating") or {}
+        if isinstance(rating_data, dict):
+            rating = rating_data.get("ratingValue")
+            rating_count = rating_data.get("reviewCount")
+        else:
+            rating = rating_data
+            rating_count = None
+
+        # Parse delivery time from etaRange
+        eta_range = item.get("etaRange") or {}
+        if isinstance(eta_range, dict):
+            delivery_time = eta_range.get("text") or f"{eta_range.get('min', '?')}-{eta_range.get('max', '?')} min"
+        else:
+            delivery_time = eta_range
+
+        # Parse fare/delivery fee from fareBadge
+        fare_badge = item.get("fareBadge") or {}
+        delivery_fee = fare_badge.get("text") if isinstance(fare_badge, dict) else None
+
+        return {
+            "source": "uber_eats",
+            "found": True,
+            "restaurant_name": item.get("title") or restaurant_name,
+            "ubereats_url": item.get("url"),
+            "phone_number": item.get("phoneNumber"),
+            "rating": rating,
+            "rating_count": rating_count,
+            "price_range": item.get("priceRange"),
+            "delivery_fee": delivery_fee,
+            "delivery_time": delivery_time,
+            "categories": item.get("cuisineList") or item.get("categories") or [],
+            "location": item.get("location"),
+            "is_open": item.get("isOpen"),
+            "hours": item.get("hours"),
+            "menu_items": menu_items,
+            "menu_item_count": len(menu_items),
+            "raw_data": item,
+        }
 
     def _parse_reviews_list(self, results: list[dict]) -> ApifyScrapedData:
         """

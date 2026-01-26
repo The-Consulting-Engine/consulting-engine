@@ -9,6 +9,7 @@ Orchestrates the competitor discovery and analysis pipeline:
 
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import quote_plus
 import uuid
 
 from .models import (
@@ -73,6 +74,40 @@ SERVICE_STYLE_TYPES = {
     "meal_delivery",
     "meal_takeaway",
 }
+
+
+def generate_ubereats_search_url(name: str, address: Optional[str] = None) -> str:
+    """
+    Generate an Uber Eats search URL for a restaurant.
+
+    Args:
+        name: Restaurant name.
+        address: Full address (used to extract location for better search results).
+
+    Returns:
+        Uber Eats search URL in format: https://www.ubereats.com/search?q=<name>+<city>+<state>
+    """
+    # Build query: restaurant name + location
+    query_parts = [name]
+
+    # Extract city and state from address
+    # Typical formats: "123 Main St, City, ST 12345" or "123 Main St, City, State"
+    if address:
+        parts = [p.strip() for p in address.split(",")]
+        if len(parts) >= 3:
+            # Format: "Street, City, State ZIP"
+            city = parts[1]
+            # State might have ZIP attached, extract just the state
+            state_part = parts[2].split()[0] if parts[2] else ""
+            query_parts.append(f"{city} {state_part}".strip())
+        elif len(parts) == 2:
+            # Format: "Street, City" - just append city
+            query_parts.append(parts[1])
+
+    query = " ".join(query_parts)
+    encoded_query = quote_plus(query)
+
+    return f"https://www.ubereats.com/search?q={encoded_query}"
 
 
 @dataclass
@@ -264,13 +299,16 @@ class CompetitorAnalyzer:
         max_competitors: int = 20,
         include_all_cuisines: bool = True,
         cuisine_override: Optional[list[str]] = None,
+        enrich_ubereats: bool = False,
     ) -> dict:
         """
         Find competitors that serve the same cuisine/style as the target restaurant.
 
-        This is a two-step process:
+        This is a multi-step process:
         1. Identify the target restaurant and its cuisine type
         2. Search for nearby competitors in the same cuisine category
+        3. Generate Uber Eats search URLs
+        4. (Optional) Scrape Uber Eats for menu/pricing data
 
         Args:
             name: Restaurant name (primary identifier - use this!).
@@ -282,6 +320,7 @@ class CompetitorAnalyzer:
             cuisine_override: Custom list of cuisines/keywords to search for.
                               Examples: ["chinese restaurant", "asian food"]
                               If provided, skips auto-detection from Google.
+            enrich_ubereats: If True, scrape Uber Eats for menu/pricing data.
 
         Returns:
             Dict with target restaurant info and list of competitors.
@@ -339,6 +378,31 @@ class CompetitorAnalyzer:
         # Limit to max_competitors
         all_competitors = all_competitors[:max_competitors]
 
+        # Generate Uber Eats search URLs for menu pricing lookup
+        print(f"\n[3] Generating Uber Eats search URLs for {len(all_competitors)} competitors...")
+        for competitor in all_competitors:
+            competitor.ubereats_search_url = generate_ubereats_search_url(
+                name=competitor.name,
+                address=competitor.address
+            )
+
+        # Also generate for the target restaurant
+        target_ubereats_url = generate_ubereats_search_url(
+            name=identity.place.name,
+            address=identity.place.address
+        )
+
+        # Optional: Enrich with Uber Eats menu/pricing data
+        target_ubereats_data = None
+        if enrich_ubereats:
+            await self.enrich_with_ubereats(all_competitors)
+            # Also scrape target restaurant
+            print(f"\n[5] Scraping Uber Eats for target: {identity.place.name}")
+            target_ubereats_data = await self.apify_scraper.scrape_ubereats_menu(
+                restaurant_name=identity.place.name,
+                address=identity.place.address,
+            )
+
         return {
             "target": {
                 "name": identity.place.name,
@@ -351,6 +415,8 @@ class CompetitorAnalyzer:
                 "service_styles": identity.service_styles,
                 "website": identity.place.website,
                 "phone": identity.place.phone_number,
+                "ubereats_search_url": target_ubereats_url,
+                "ubereats_data": target_ubereats_data,
             },
             "search_criteria": {
                 "keywords": keywords_to_search,
@@ -359,6 +425,40 @@ class CompetitorAnalyzer:
             "competitors": all_competitors,
             "total_found": len(all_competitors),
         }
+
+    async def enrich_with_ubereats(
+        self,
+        competitors: list[GooglePlaceResult],
+        max_concurrent: int = 3,
+    ) -> list[GooglePlaceResult]:
+        """
+        Enrich competitors with Uber Eats menu and pricing data.
+
+        Args:
+            competitors: List of competitors to enrich
+            max_concurrent: Max concurrent Apify jobs
+
+        Returns:
+            Same list of competitors with ubereats_data populated
+        """
+        print(f"\n[4] Enriching {len(competitors)} competitors with Uber Eats data...")
+
+        ubereats_results = await self.apify_scraper.scrape_ubereats_batch(
+            competitors=competitors,
+            max_concurrent=max_concurrent,
+        )
+
+        # Attach Uber Eats data to each competitor
+        for competitor in competitors:
+            if competitor.place_id in ubereats_results:
+                ue_data = ubereats_results[competitor.place_id]
+                competitor.ubereats_data = ue_data
+                if ue_data.get("found"):
+                    print(f"    ✓ {competitor.name}: {ue_data.get('menu_item_count', 0)} menu items")
+                else:
+                    print(f"    ✗ {competitor.name}: Not found on Uber Eats")
+
+        return competitors
 
     async def analyze(
         self,

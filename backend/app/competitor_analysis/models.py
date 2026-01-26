@@ -55,6 +55,35 @@ class GooglePlaceResult(BaseModel):
     reviews: Optional[list[dict]] = None
     google_maps_url: Optional[str] = None  # Direct Google Maps URL for Apify
 
+    # Uber Eats menu/pricing link
+    ubereats_search_url: Optional[str] = None  # Uber Eats search URL for menu pricing
+    ubereats_data: Optional["UberEatsData"] = None  # Scraped menu/pricing data from Uber Eats
+
+
+class UberEatsMenuItem(BaseModel):
+    """A single menu item from Uber Eats."""
+    name: str
+    description: Optional[str] = None
+    price: Optional[str] = None  # e.g., "$12.99"
+    category: Optional[str] = None  # e.g., "Appetizers", "Main Courses"
+
+
+class UberEatsData(BaseModel):
+    """Menu and pricing data scraped from Uber Eats."""
+    source: str = "uber_eats"
+    found: bool = False
+    restaurant_name: str
+    ubereats_url: Optional[str] = None
+    rating: Optional[float] = None
+    rating_count: Optional[int] = None
+    price_range: Optional[str] = None  # e.g., "$$"
+    delivery_fee: Optional[str] = None
+    delivery_time: Optional[str] = None  # e.g., "25-35 min"
+    categories: list[str] = Field(default_factory=list)
+    menu_items: list[UberEatsMenuItem] = Field(default_factory=list)
+    menu_item_count: int = 0
+    raw_data: Optional[dict] = None
+
 
 class ApifyScrapedData(BaseModel):
     """Data scraped via Apify (e.g., from Yelp, TripAdvisor, Google reviews)."""
