@@ -19,6 +19,13 @@ class InitiativeKind(str, enum.Enum):
     SANDBOX = "sandbox"
 
 
+class CompetitorAnalysisStatus(str, enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    ERROR = "error"
+
+
 class Organization(Base):
     __tablename__ = "organizations"
 
@@ -74,3 +81,44 @@ class Initiative(Base):
     body = Column(JSON, nullable=False)
     rank = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class CompetitorAnalysis(Base):
+    """Stores competitor analysis results for a cycle."""
+    __tablename__ = "competitor_analyses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cycle_id = Column(UUID(as_uuid=True), ForeignKey("cycles.id"), nullable=False, unique=True)
+
+    # Search parameters
+    restaurant_name = Column(Text, nullable=False)
+    address = Column(Text, nullable=False)
+    search_radius_meters = Column(Integer, default=2000)
+    max_competitors = Column(Integer, default=8)
+
+    # Status tracking
+    status = Column(
+        SQLEnum(CompetitorAnalysisStatus, values_callable=lambda obj: [e.value for e in obj]),
+        default=CompetitorAnalysisStatus.PENDING,
+        nullable=False,
+    )
+    error_message = Column(Text, nullable=True)
+
+    # Results (stored as JSON)
+    competitor_count = Column(Integer, nullable=True)
+    positioning_summary = Column(Text, nullable=True)
+
+    # Full analysis data
+    restaurants_data = Column(JSON, nullable=True)  # List of competitor profiles
+    price_analysis = Column(JSON, nullable=True)  # Price positioning metrics
+    positioning = Column(JSON, nullable=True)  # PricePositioning as dict
+    premium_validation = Column(JSON, nullable=True)  # Premium validation results
+    menu_complexity = Column(JSON, nullable=True)  # MenuComplexity as dict
+    competitive_gaps = Column(JSON, nullable=True)  # List of gaps
+    strategic_initiatives = Column(JSON, nullable=True)  # Competitor-derived initiatives
+    visualizations = Column(JSON, nullable=True)  # Base64 encoded charts
+    executive_summary = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    analyzed_at = Column(DateTime(timezone=True), nullable=True)
