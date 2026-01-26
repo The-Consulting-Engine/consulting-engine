@@ -38,13 +38,16 @@ export interface QuestionnaireSection {
 export interface Question {
   id: string;
   label: string;
-  type: 'single_select' | 'multi_select' | 'likert_1_5' | 'short_text' | 'long_text';
+  type: 'single_select' | 'multi_select' | 'likert_1_5' | 'short_text' | 'long_text' | 'ranking';
   required: boolean;
   options?: string[];
   max_selected?: number;
   max_chars?: number;
   min_label?: string;
   max_label?: string;
+  helper_text?: string;
+  ranking_min?: number;
+  ranking_max?: number;
 }
 
 export interface Results {

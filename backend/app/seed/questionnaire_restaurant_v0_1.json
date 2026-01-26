@@ -5,6 +5,75 @@
   "description": "Short intake to capture constraints, operations reality, and marketing channels. Mostly checkboxes and simple selects.",
   "sections": [
     {
+      "id": "A0_business_profile",
+      "title": "Business profile",
+      "questions": [
+        {
+          "id": "A0_1_concept_type",
+          "label": "What best describes your restaurant?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "Quick service (QSR)",
+            "Fast casual",
+            "Casual dine-in",
+            "Full service",
+            "Bar / nightlife",
+            "Cafe / bakery",
+            "Ghost kitchen / delivery-only",
+            "Food truck",
+            "Other"
+          ]
+        },
+        {
+          "id": "A0_2_order_channels_ranked",
+          "label": "Rank your top order channels by volume (most → least).",
+          "helper_text": "Drag to rank. Include only channels you actually use.",
+          "type": "ranking",
+          "required": true,
+          "options": [
+            "Walk-in / counter",
+            "Table service",
+            "Drive-thru",
+            "Online pickup",
+            "Third-party delivery",
+            "In-house delivery",
+            "Catering / large orders"
+          ],
+          "ranking_min": 1,
+          "ranking_max": 7
+        },
+        {
+          "id": "A0_3_primary_dayparts",
+          "label": "What dayparts matter most for your business? (Pick up to 2)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Breakfast",
+            "Lunch",
+            "Dinner",
+            "Late night",
+            "Mixed / all day"
+          ],
+          "max_selected": 2
+        },
+        {
+          "id": "A0_4_employee_count_per_location",
+          "label": "Roughly how many employees do you have per location?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "1–10",
+            "11–25",
+            "26–50",
+            "51–100",
+            "100+",
+            "Not sure"
+          ]
+        }
+      ]
+    },
+    {
       "id": "A_context_constraints",
       "title": "Context & Constraints",
       "questions": [

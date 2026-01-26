@@ -3,6 +3,141 @@
   "vertical_id": "restaurant_v0_1",
   "rules": [
     {
+      "id": "profile_concept_qsr",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Quick service (QSR)" }],
+      "then": { "add_flags": ["profile_concept_qsr"] }
+    },
+    {
+      "id": "profile_concept_fast_casual",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Fast casual" }],
+      "then": { "add_flags": ["profile_concept_fast_casual"] }
+    },
+    {
+      "id": "profile_concept_casual_dine_in",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Casual dine-in" }],
+      "then": { "add_flags": ["profile_concept_casual_dine_in"] }
+    },
+    {
+      "id": "profile_concept_full_service",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Full service" }],
+      "then": { "add_flags": ["profile_concept_full_service"] }
+    },
+    {
+      "id": "profile_concept_bar_nightlife",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Bar / nightlife" }],
+      "then": { "add_flags": ["profile_concept_bar_nightlife"] }
+    },
+    {
+      "id": "profile_concept_cafe_bakery",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Cafe / bakery" }],
+      "then": { "add_flags": ["profile_concept_cafe_bakery"] }
+    },
+    {
+      "id": "profile_concept_ghost_kitchen",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Ghost kitchen / delivery-only" }],
+      "then": { "add_flags": ["profile_concept_ghost_kitchen"] }
+    },
+    {
+      "id": "profile_concept_food_truck",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Food truck" }],
+      "then": { "add_flags": ["profile_concept_food_truck"] }
+    },
+    {
+      "id": "profile_concept_other",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Other" }],
+      "then": { "add_flags": ["profile_concept_other"] }
+    },
+    {
+      "id": "profile_primary_channel_drive_thru",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Drive-thru" }],
+      "then": { "add_flags": ["profile_primary_channel_drive_thru"] }
+    },
+    {
+      "id": "profile_primary_channel_3p_delivery",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Third-party delivery" }],
+      "then": { "add_flags": ["profile_primary_channel_3p_delivery"] }
+    },
+    {
+      "id": "profile_primary_channel_pickup",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Online pickup" }],
+      "then": { "add_flags": ["profile_primary_channel_pickup"] }
+    },
+    {
+      "id": "profile_primary_channel_table_service",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Table service" }],
+      "then": { "add_flags": ["profile_primary_channel_table_service"] }
+    },
+    {
+      "id": "profile_primary_channel_counter",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Walk-in / counter" }],
+      "then": { "add_flags": ["profile_primary_channel_counter"] }
+    },
+    {
+      "id": "profile_primary_channel_catering",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Catering / large orders" }],
+      "then": { "add_flags": ["profile_primary_channel_catering"] }
+    },
+    {
+      "id": "profile_primary_channel_inhouse_delivery",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "In-house delivery" }],
+      "then": { "add_flags": ["profile_primary_channel_inhouse_delivery"] }
+    },
+    {
+      "id": "profile_daypart_breakfast",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Breakfast" }],
+      "then": { "add_flags": ["profile_daypart_breakfast"] }
+    },
+    {
+      "id": "profile_daypart_lunch",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Lunch" }],
+      "then": { "add_flags": ["profile_daypart_lunch"] }
+    },
+    {
+      "id": "profile_daypart_dinner",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Dinner" }],
+      "then": { "add_flags": ["profile_daypart_dinner"] }
+    },
+    {
+      "id": "profile_daypart_late_night",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Late night" }],
+      "then": { "add_flags": ["profile_daypart_late_night"] }
+    },
+    {
+      "id": "profile_daypart_mixed",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Mixed / all day" }],
+      "then": { "add_flags": ["profile_daypart_mixed"] }
+    },
+    {
+      "id": "profile_team_1_10",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "1–10" }],
+      "then": { "add_flags": ["profile_team_1_10"] }
+    },
+    {
+      "id": "profile_team_11_25",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "11–25" }],
+      "then": { "add_flags": ["profile_team_11_25"] }
+    },
+    {
+      "id": "profile_team_26_50",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "26–50" }],
+      "then": { "add_flags": ["profile_team_26_50"] }
+    },
+    {
+      "id": "profile_team_51_100",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "51–100" }],
+      "then": { "add_flags": ["profile_team_51_100"] }
+    },
+    {
+      "id": "profile_team_100_plus",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "100+" }],
+      "then": { "add_flags": ["profile_team_100_plus"] }
+    },
+    {
+      "id": "profile_team_unknown",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "Not sure" }],
+      "then": { "add_flags": ["profile_team_unknown"] }
+    },
+    {
       "id": "flag_franchise_pricing_constraint",
       "when": [{ "q": "A2_constraints", "op": "contains", "value": "Franchise pricing rules" }],
       "then": { "add_flags": ["constraint_franchise_pricing"] }

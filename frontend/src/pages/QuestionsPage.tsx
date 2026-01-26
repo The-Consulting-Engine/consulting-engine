@@ -24,6 +24,10 @@ export default function QuestionsPage() {
       
       // Preload default test answers for demo
       const defaultResponses: Record<string, any> = {
+        "A0_1_concept_type": "Fast casual",
+        "A0_2_order_channels_ranked": ["Walk-in / counter", "Online pickup", "Third-party delivery"],
+        "A0_3_primary_dayparts": ["Lunch", "Dinner"],
+        "A0_4_employee_count_per_location": "11–25",
         "A1_role": "Owner/operator",
         "A2_constraints": ["None of these"],
         "A3_locations_scope": "1",
@@ -202,6 +206,139 @@ export default function QuestionsPage() {
               </button>
             ))}
           </div>
+        </div>
+      );
+    }
+
+    if (question.type === 'ranking') {
+      const currentRanking = Array.isArray(value) ? value : [];
+      const availableOptions = question.options || [];
+      const unranked = availableOptions.filter((opt) => !currentRanking.includes(opt));
+
+      const moveItem = (fromIndex: number, toIndex: number) => {
+        const newRanking = [...currentRanking];
+        const [moved] = newRanking.splice(fromIndex, 1);
+        newRanking.splice(toIndex, 0, moved);
+        handleResponseChange(question.id, newRanking);
+      };
+
+      const addToRanking = (option: string) => {
+        if (currentRanking.length < (question.ranking_max || availableOptions.length)) {
+          handleResponseChange(question.id, [...currentRanking, option]);
+        }
+      };
+
+      const removeFromRanking = (option: string) => {
+        handleResponseChange(question.id, currentRanking.filter((v) => v !== option));
+      };
+
+      return (
+        <div key={question.id} style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            {question.label} {question.required && <span style={{ color: 'red' }}>*</span>}
+          </label>
+          {question.helper_text && (
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '12px' }}>{question.helper_text}</p>
+          )}
+          
+          {/* Ranked items */}
+          <div style={{ marginBottom: '15px' }}>
+            {currentRanking.map((option, index) => (
+              <div
+                key={option}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '10px',
+                  marginBottom: '8px',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                }}
+              >
+                <span style={{ marginRight: '12px', fontWeight: 'bold', color: '#007bff', minWidth: '30px' }}>
+                  #{index + 1}
+                </span>
+                <span style={{ flex: 1 }}>{option}</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, index - 1)}
+                      style={{
+                        padding: '4px 8px',
+                        border: '1px solid #ddd',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                      }}
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                  )}
+                  {index < currentRanking.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => moveItem(index, index + 1)}
+                      style={{
+                        padding: '4px 8px',
+                        border: '1px solid #ddd',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                      }}
+                      title="Move down"
+                    >
+                      ↓
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFromRanking(option)}
+                    style={{
+                      padding: '4px 8px',
+                      border: '1px solid #ddd',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      marginLeft: '4px',
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Unranked items */}
+          {unranked.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>Add to ranking:</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {unranked.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => addToRanking(option)}
+                    disabled={currentRanking.length >= (question.ranking_max || availableOptions.length)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      backgroundColor: 'white',
+                      cursor: currentRanking.length >= (question.ranking_max || availableOptions.length) ? 'not-allowed' : 'pointer',
+                      borderRadius: '4px',
+                      opacity: currentRanking.length >= (question.ranking_max || availableOptions.length) ? 0.5 : 1,
+                    }}
+                  >
+                    + {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     }

@@ -102,6 +102,12 @@ def evaluate_condition(condition: Dict, responses: Dict[str, Any]) -> bool:
         text = str(response_value) if response_value is not None else ""
         return bool(re.search(pattern, text))
     
+    if op == "array_first":
+        # Check if response is an array and first element equals value
+        if isinstance(response_value, list) and len(response_value) > 0:
+            return response_value[0] == value
+        return False
+    
     return False
 
 
