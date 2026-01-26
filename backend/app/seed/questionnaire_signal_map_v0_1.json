@@ -1,0 +1,256 @@
+{
+  "schema_version": "0.1",
+  "vertical_id": "restaurant_v0_1",
+  "rules": [
+    {
+      "id": "profile_concept_qsr",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Quick service (QSR)" }],
+      "then": { "add_flags": ["profile_concept_qsr"] }
+    },
+    {
+      "id": "profile_concept_fast_casual",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Fast casual" }],
+      "then": { "add_flags": ["profile_concept_fast_casual"] }
+    },
+    {
+      "id": "profile_concept_casual_dine_in",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Casual dine-in" }],
+      "then": { "add_flags": ["profile_concept_casual_dine_in"] }
+    },
+    {
+      "id": "profile_concept_full_service",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Full service" }],
+      "then": { "add_flags": ["profile_concept_full_service"] }
+    },
+    {
+      "id": "profile_concept_bar_nightlife",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Bar / nightlife" }],
+      "then": { "add_flags": ["profile_concept_bar_nightlife"] }
+    },
+    {
+      "id": "profile_concept_cafe_bakery",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Cafe / bakery" }],
+      "then": { "add_flags": ["profile_concept_cafe_bakery"] }
+    },
+    {
+      "id": "profile_concept_ghost_kitchen",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Ghost kitchen / delivery-only" }],
+      "then": { "add_flags": ["profile_concept_ghost_kitchen"] }
+    },
+    {
+      "id": "profile_concept_food_truck",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Food truck" }],
+      "then": { "add_flags": ["profile_concept_food_truck"] }
+    },
+    {
+      "id": "profile_concept_other",
+      "when": [{ "q": "A0_1_concept_type", "op": "equals", "value": "Other" }],
+      "then": { "add_flags": ["profile_concept_other"] }
+    },
+    {
+      "id": "profile_primary_channel_drive_thru",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Drive-thru" }],
+      "then": { "add_flags": ["profile_primary_channel_drive_thru"] }
+    },
+    {
+      "id": "profile_primary_channel_3p_delivery",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Third-party delivery" }],
+      "then": { "add_flags": ["profile_primary_channel_3p_delivery"] }
+    },
+    {
+      "id": "profile_primary_channel_pickup",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Online pickup" }],
+      "then": { "add_flags": ["profile_primary_channel_pickup"] }
+    },
+    {
+      "id": "profile_primary_channel_table_service",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Table service" }],
+      "then": { "add_flags": ["profile_primary_channel_table_service"] }
+    },
+    {
+      "id": "profile_primary_channel_counter",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Walk-in / counter" }],
+      "then": { "add_flags": ["profile_primary_channel_counter"] }
+    },
+    {
+      "id": "profile_primary_channel_catering",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "Catering / large orders" }],
+      "then": { "add_flags": ["profile_primary_channel_catering"] }
+    },
+    {
+      "id": "profile_primary_channel_inhouse_delivery",
+      "when": [{ "q": "A0_2_order_channels_ranked", "op": "array_first", "value": "In-house delivery" }],
+      "then": { "add_flags": ["profile_primary_channel_inhouse_delivery"] }
+    },
+    {
+      "id": "profile_daypart_breakfast",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Breakfast" }],
+      "then": { "add_flags": ["profile_daypart_breakfast"] }
+    },
+    {
+      "id": "profile_daypart_lunch",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Lunch" }],
+      "then": { "add_flags": ["profile_daypart_lunch"] }
+    },
+    {
+      "id": "profile_daypart_dinner",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Dinner" }],
+      "then": { "add_flags": ["profile_daypart_dinner"] }
+    },
+    {
+      "id": "profile_daypart_late_night",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Late night" }],
+      "then": { "add_flags": ["profile_daypart_late_night"] }
+    },
+    {
+      "id": "profile_daypart_mixed",
+      "when": [{ "q": "A0_3_primary_dayparts", "op": "contains", "value": "Mixed / all day" }],
+      "then": { "add_flags": ["profile_daypart_mixed"] }
+    },
+    {
+      "id": "profile_team_1_10",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "1–10" }],
+      "then": { "add_flags": ["profile_team_1_10"] }
+    },
+    {
+      "id": "profile_team_11_25",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "11–25" }],
+      "then": { "add_flags": ["profile_team_11_25"] }
+    },
+    {
+      "id": "profile_team_26_50",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "26–50" }],
+      "then": { "add_flags": ["profile_team_26_50"] }
+    },
+    {
+      "id": "profile_team_51_100",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "51–100" }],
+      "then": { "add_flags": ["profile_team_51_100"] }
+    },
+    {
+      "id": "profile_team_100_plus",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "100+" }],
+      "then": { "add_flags": ["profile_team_100_plus"] }
+    },
+    {
+      "id": "profile_team_unknown",
+      "when": [{ "q": "A0_4_employee_count_per_location", "op": "equals", "value": "Not sure" }],
+      "then": { "add_flags": ["profile_team_unknown"] }
+    },
+    {
+      "id": "flag_franchise_pricing_constraint",
+      "when": [{ "q": "A2_constraints", "op": "contains", "value": "Franchise pricing rules" }],
+      "then": { "add_flags": ["constraint_franchise_pricing"] }
+    },
+    {
+      "id": "flag_franchise_marketing_constraint",
+      "when": [{ "q": "A2_constraints", "op": "contains", "value": "Franchise marketing rules" }],
+      "then": { "add_flags": ["constraint_franchise_marketing"] }
+    },
+    {
+      "id": "flag_menu_locked",
+      "when": [{ "q": "A2_constraints", "op": "contains", "value": "Franchise menu lock" }],
+      "then": { "add_flags": ["constraint_menu_locked"] }
+    },
+    {
+      "id": "flag_fixed_hours",
+      "when": [{ "q": "A2_constraints", "op": "contains", "value": "Fixed operating hours (lease/city)" }],
+      "then": { "add_flags": ["constraint_fixed_hours"] }
+    },
+    {
+      "id": "flag_no_pricing_control",
+      "when": [{ "q": "D2_last_price_increase", "op": "equals", "value": "Never/not allowed" }],
+      "then": { "add_flags": ["constraint_no_pricing_control"] }
+    },
+    {
+      "id": "flag_labor_pain",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Labor too high" }],
+      "then": { "add_flags": ["pain_labor_high"] }
+    },
+    {
+      "id": "flag_staffing_chaos",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Staffing chaotic" }],
+      "then": { "add_flags": ["pain_staffing_chaos"] }
+    },
+    {
+      "id": "flag_sales_soft",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Sales soft/unpredictable" }],
+      "then": { "add_flags": ["pain_sales_soft"] }
+    },
+    {
+      "id": "flag_food_cost_pain",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Food costs out of control" }],
+      "then": { "add_flags": ["pain_food_costs"] }
+    },
+    {
+      "id": "flag_discounting_pain",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Too much discounting/comps" }],
+      "then": { "add_flags": ["pain_discounting"] }
+    },
+    {
+      "id": "flag_waste_pain",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Waste/spoilage" }],
+      "then": { "add_flags": ["pain_waste"] }
+    },
+    {
+      "id": "flag_execution_inconsistent",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Managers not executing consistently" }],
+      "then": { "add_flags": ["pain_execution_inconsistent"] }
+    },
+    {
+      "id": "flag_service_speed_pain",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Customer experience/service speed" }],
+      "then": { "add_flags": ["pain_service_speed"] }
+    },
+    {
+      "id": "flag_unknown_leaks",
+      "when": [{ "q": "B1_drags", "op": "contains", "value": "Don't know where money is leaking" }],
+      "then": { "add_flags": ["pain_unknown_leaks"] }
+    },
+    {
+      "id": "score_schedule_confidence",
+      "when": [{ "q": "C2_schedule_confidence", "op": "exists" }],
+      "then": { "set_score": { "key": "schedule_confidence", "map_likert_1_5_to_0_1": true } }
+    },
+    {
+      "id": "flag_schedule_low_confidence",
+      "when": [{ "q": "C2_schedule_confidence", "op": "lte", "value": 2 }],
+      "then": { "add_flags": ["signal_schedule_low_confidence"] }
+    },
+    {
+      "id": "flag_menu_complex",
+      "when": [{ "q": "D1_menu_size", "op": "equals", "value": "Too big/complicated" }],
+      "then": { "add_flags": ["signal_menu_complex"] }
+    },
+    {
+      "id": "flag_pricing_stale",
+      "when": [{ "q": "D2_last_price_increase", "op": "in", "value": ["More than 12 months ago", "Not sure"] }],
+      "then": { "add_flags": ["signal_pricing_stale"] }
+    },
+    {
+      "id": "flag_upsell_weak",
+      "when": [{ "q": "D3_upselling", "op": "in", "value": ["Rare", "We don't upsell"] }],
+      "then": { "add_flags": ["signal_upsell_weak"] }
+    },
+    {
+      "id": "score_marketing_roi_confidence",
+      "when": [{ "q": "E4_marketing_roi_confidence", "op": "exists" }],
+      "then": { "set_score": { "key": "marketing_roi_confidence", "map_likert_1_5_to_0_1": true } }
+    },
+    {
+      "id": "flag_marketing_owner_missing",
+      "when": [{ "q": "E3_marketing_owner", "op": "in", "value": ["No one/ad hoc", "Not sure"] }],
+      "then": { "add_flags": ["signal_marketing_owner_missing"] }
+    },
+    {
+      "id": "flag_marketing_channels_none",
+      "when": [{ "q": "E1_channels_used", "op": "contains", "value": "None / not sure" }],
+      "then": { "add_flags": ["signal_marketing_channels_none"] }
+    },
+    {
+      "id": "flag_review_cadence_low",
+      "when": [{ "q": "F1_review_frequency", "op": "in", "value": ["Ad hoc", "Rarely"] }],
+      "then": { "add_flags": ["signal_review_cadence_low"] }
+    }
+  ]
+}

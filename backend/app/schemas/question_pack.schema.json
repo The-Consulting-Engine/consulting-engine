@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["schema_version", "vertical_id", "title", "description", "sections"],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "vertical_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "questions"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "label", "type", "required"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["single_select", "multi_select", "likert_1_5", "short_text", "long_text", "ranking"]
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "max_selected": {
+                  "type": "integer"
+                },
+                "max_chars": {
+                  "type": "integer"
+                },
+                "min_label": {
+                  "type": "string"
+                },
+                "max_label": {
+                  "type": "string"
+                },
+                "helper_text": {
+                  "type": "string"
+                },
+                "ranking_min": {
+                  "type": "integer"
+                },
+                "ranking_max": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

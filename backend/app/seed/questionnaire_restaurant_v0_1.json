@@ -1,0 +1,328 @@
+{
+  "schema_version": "0.1",
+  "vertical_id": "restaurant_v0_1",
+  "title": "Profit Reset Intake (Restaurant MVP 0.1)",
+  "description": "Short intake to capture constraints, operations reality, and marketing channels. Mostly checkboxes and simple selects.",
+  "sections": [
+    {
+      "id": "A0_business_profile",
+      "title": "Business profile",
+      "questions": [
+        {
+          "id": "A0_1_concept_type",
+          "label": "What best describes your restaurant?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "Quick service (QSR)",
+            "Fast casual",
+            "Casual dine-in",
+            "Full service",
+            "Bar / nightlife",
+            "Cafe / bakery",
+            "Ghost kitchen / delivery-only",
+            "Food truck",
+            "Other"
+          ]
+        },
+        {
+          "id": "A0_2_order_channels_ranked",
+          "label": "Rank your top order channels by volume (most → least).",
+          "helper_text": "Drag to rank. Include only channels you actually use.",
+          "type": "ranking",
+          "required": true,
+          "options": [
+            "Walk-in / counter",
+            "Table service",
+            "Drive-thru",
+            "Online pickup",
+            "Third-party delivery",
+            "In-house delivery",
+            "Catering / large orders"
+          ],
+          "ranking_min": 1,
+          "ranking_max": 7
+        },
+        {
+          "id": "A0_3_primary_dayparts",
+          "label": "What dayparts matter most for your business? (Pick up to 2)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Breakfast",
+            "Lunch",
+            "Dinner",
+            "Late night",
+            "Mixed / all day"
+          ],
+          "max_selected": 2
+        },
+        {
+          "id": "A0_4_employee_count_per_location",
+          "label": "Roughly how many employees do you have per location?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "1–10",
+            "11–25",
+            "26–50",
+            "51–100",
+            "100+",
+            "Not sure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "A_context_constraints",
+      "title": "Context & Constraints",
+      "questions": [
+        {
+          "id": "A1_role",
+          "label": "What's your role right now?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Owner/operator", "GM / manager", "Franchisee (multi-unit)", "Ops lead", "Other"]
+        },
+        {
+          "id": "A2_constraints",
+          "label": "Which constraints apply? (Select all that apply)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Franchise pricing rules",
+            "Franchise marketing rules",
+            "Franchise menu lock",
+            "Franchise hours constraint",
+            "Required vendors",
+            "Union/labor agreement",
+            "Fixed operating hours (lease/city)",
+            "Alcohol license constraints",
+            "None of these"
+          ],
+          "max_selected": 8
+        },
+        {
+          "id": "A3_locations_scope",
+          "label": "How many locations are in scope for this Profit Reset?",
+          "type": "single_select",
+          "required": true,
+          "options": ["1", "2–3", "4–10", "11–25", "26+"]
+        }
+      ]
+    },
+    {
+      "id": "B_whats_broken",
+      "title": "What feels broken right now",
+      "questions": [
+        {
+          "id": "B1_drags",
+          "label": "What are the biggest drags on profit right now? (Pick up to 3)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Labor too high",
+            "Staffing chaotic",
+            "Sales soft/unpredictable",
+            "Food costs out of control",
+            "Too much discounting/comps",
+            "Waste/spoilage",
+            "Managers not executing consistently",
+            "Customer experience/service speed",
+            "Don't know where money is leaking",
+            "Other"
+          ],
+          "max_selected": 3
+        },
+        {
+          "id": "B2_suspected_leak",
+          "label": "If you had to guess, where is money leaking most?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "Overstaffing / too many hours",
+            "Overtime",
+            "Food waste / portion drift",
+            "Discounting / promos",
+            "Comps / voids",
+            "Delivery fees/promos",
+            "Repairs/maintenance creep",
+            "Supplies / small purchases",
+            "Not sure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C_labor_ops",
+      "title": "Labor & Operations",
+      "questions": [
+        {
+          "id": "C1_staffing_state",
+          "label": "How would you describe staffing week-to-week?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Stable", "Somewhat stable", "Swings wildly", "Always short-staffed", "Always overstaffed", "Not sure"]
+        },
+        {
+          "id": "C2_schedule_confidence",
+          "label": "How confident are you that schedules match demand?",
+          "type": "likert_1_5",
+          "required": true,
+          "min_label": "Not confident",
+          "max_label": "Very confident"
+        },
+        {
+          "id": "C3_ops_stressors",
+          "label": "Which ops issues show up most often? (Pick up to 2)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Service is slow during rush",
+            "Order mistakes/refires",
+            "Callouts and coverage gaps",
+            "Kitchen bottlenecks",
+            "Front-of-house bottlenecks",
+            "Inventory/stockouts",
+            "Training is inconsistent",
+            "None of these"
+          ],
+          "max_selected": 2
+        }
+      ]
+    },
+    {
+      "id": "D_menu_pricing",
+      "title": "Menu, Pricing, and Sales Levers",
+      "questions": [
+        {
+          "id": "D1_menu_size",
+          "label": "How does your menu feel right now?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Simple and focused", "About right", "Too big/complicated", "Not sure"]
+        },
+        {
+          "id": "D2_last_price_increase",
+          "label": "When did you last raise prices?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Within 3 months", "3–6 months ago", "6–12 months ago", "More than 12 months ago", "Never/not allowed", "Not sure"]
+        },
+        {
+          "id": "D3_upselling",
+          "label": "How consistent is upselling (add-ons, sides, upgrades)?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Consistent and coached", "Inconsistent/coached", "Rare", "We don't upsell"]
+        }
+      ]
+    },
+    {
+      "id": "E_marketing_channels",
+      "title": "Marketing Channels",
+      "questions": [
+        {
+          "id": "E1_channels_used",
+          "label": "Which marketing channels do you actively use today? (Select all that apply)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Google Business Profile",
+            "Yelp",
+            "Instagram",
+            "Facebook",
+            "TikTok",
+            "Email",
+            "SMS",
+            "3P delivery promos",
+            "Local partnerships/events",
+            "Paid ads",
+            "None / not sure"
+          ],
+          "max_selected": 10
+        },
+        {
+          "id": "E2_channels_drive",
+          "label": "Which channels do you believe actually bring in customers? (Pick up to 3)",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Google Business Profile",
+            "Yelp",
+            "Instagram",
+            "Facebook",
+            "TikTok",
+            "Email",
+            "SMS",
+            "3P delivery promos",
+            "Local partnerships/events",
+            "Word of mouth",
+            "Not sure"
+          ],
+          "max_selected": 3
+        },
+        {
+          "id": "E3_marketing_owner",
+          "label": "Who owns marketing execution week-to-week?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Owner", "Manager/GM", "Staff member", "Agency", "No one/ad hoc", "Not sure"]
+        },
+        {
+          "id": "E4_marketing_roi_confidence",
+          "label": "How confident are you that marketing spend/effort is paying off?",
+          "type": "likert_1_5",
+          "required": true,
+          "min_label": "Not confident",
+          "max_label": "Very confident"
+        }
+      ]
+    },
+    {
+      "id": "F_execution_cadence",
+      "title": "Execution Cadence",
+      "questions": [
+        {
+          "id": "F1_review_frequency",
+          "label": "How often do you review performance with your team?",
+          "type": "single_select",
+          "required": true,
+          "options": ["Weekly", "Every other week", "Monthly", "Ad hoc", "Rarely"]
+        },
+        {
+          "id": "F2_underperformance_response",
+          "label": "When a location/team is underperforming, what usually happens?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "We diagnose quickly and take action",
+            "We talk about it but follow-through is inconsistent",
+            "We wait and hope it improves",
+            "Not sure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G_open_ended",
+      "title": "A little more context",
+      "questions": [
+        {
+          "id": "G1_fix_one_thing_90",
+          "label": "If you could fix one thing in the next 90 days, what would it be?",
+          "type": "long_text",
+          "required": false,
+          "max_chars": 1200
+        },
+        {
+          "id": "G2_do_not_recommend",
+          "label": "Anything we should avoid recommending? (e.g., pricing changes, hours changes)",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 300
+        }
+      ]
+    }
+  ]
+}

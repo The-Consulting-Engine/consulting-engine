@@ -1,1 +1,0 @@
-"""Intake questions system."""

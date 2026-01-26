@@ -1,0 +1,55 @@
+{
+  "version": "0.1",
+  "categories": [
+    {
+      "id": "labor_scheduling",
+      "label": "Labor scheduling discipline",
+      "description": "Align staffing levels to real demand to reduce chaos and wasted hours without hurting service."
+    },
+    {
+      "id": "service_speed",
+      "label": "Service speed & throughput",
+      "description": "Reduce bottlenecks during peak periods to improve speed and guest experience."
+    },
+    {
+      "id": "manager_cadence",
+      "label": "Manager execution cadence",
+      "description": "Create a consistent weekly rhythm for reviewing performance and following through."
+    },
+    {
+      "id": "training_consistency",
+      "label": "Training consistency",
+      "description": "Standardize onboarding and station training to reduce errors and dependence on hero staff."
+    },
+    {
+      "id": "menu_simplicity",
+      "label": "Menu simplicity & focus",
+      "description": "Reduce complexity that slows the kitchen and increases mistakes."
+    },
+    {
+      "id": "discounting_discipline",
+      "label": "Discounting & comp discipline",
+      "description": "Bring structure to comps, voids, and promos to reduce leakage."
+    },
+    {
+      "id": "upsell_attachment",
+      "label": "Upselling & attachment",
+      "description": "Improve add-ons and suggestive selling without hurting guest experience."
+    },
+    {
+      "id": "marketing_ownership",
+      "label": "Marketing ownership & cadence",
+      "description": "Clarify who owns marketing and establish a simple weekly execution plan."
+    },
+    {
+      "id": "local_search",
+      "label": "Local search presence",
+      "description": "Improve Google Business Profile and local discovery hygiene."
+    },
+    {
+      "id": "delivery_ops",
+      "label": "Delivery operations hygiene",
+      "description": "Clean up delivery menus, timing, and execution to reduce friction."
+    }
+  ]
+}

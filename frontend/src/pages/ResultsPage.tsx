@@ -1,490 +1,200 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import {
-  Container,
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  Chip,
-  Alert,
-  CircularProgress,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-} from '@mui/material'
-import {
-  Download,
-  Description,
-  Slideshow,
-  ArrowBack,
-  TrendingUp,
-  TrendingDown,
-} from '@mui/icons-material'
-import { getResults, generateMemo, generateDeck, listReports, downloadReport } from '../api/client'
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { api, Results } from '../api/client';
 
-interface Fact {
-  evidence_key: string
-  label: string
-  value?: number
-  value_text?: string
-  unit?: string
-  period?: string
-  source?: string
-}
-
-interface SpecificityDraft {
-  what: string
-  where: string
-  how_much: string
-  timing: string
-  next_steps: string[]
-  assumptions: string[]
-  data_needed: string[]
-  confidence: string
-  specificity_level: string
-}
-
-interface Initiative {
-  initiative_id: string
-  title: string
-  category: string
-  description: string
-  rank: number
-  impact_low?: number
-  impact_mid?: number
-  impact_high?: number
-  impact_unit?: string
-  priority_score?: number
-  explanation?: string
-  assumptions?: string[]
-  data_gaps?: string[]
-  lane?: string
-  specificity_draft?: SpecificityDraft
-}
-
-interface Results {
-  run_id: number
-  mode: string
-  confidence_score: number
-  status: string
-  analytics_facts: Fact[]
-  initiatives: Initiative[]
-}
-
-function ResultsPage() {
-  const { runId } = useParams<{ runId: string }>()
-  const navigate = useNavigate()
-  const [results, setResults] = useState<Results | null>(null)
-  const [reports, setReports] = useState<any[]>([])
-  const [generating, setGenerating] = useState<string | null>(null)
-  const [error, setError] = useState('')
+export default function ResultsPage() {
+  const { cycleId } = useParams<{ cycleId: string }>();
+  const [results, setResults] = useState<Results | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadResults()
-    loadReports()
-  }, [runId])
+    if (!cycleId) return;
+    loadResults();
+  }, [cycleId]);
 
   const loadResults = async () => {
+    if (!cycleId) {
+      setError('Cycle ID is missing');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const data = await getResults(Number(runId))
-      setResults(data)
+      const data = await api.getResults(cycleId);
+      if (!data) {
+        setError('No results data received');
+        return;
+      }
+      setResults(data);
     } catch (err) {
-      console.error('Failed to load results:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load results';
+      setError(errorMessage);
+      console.error('Results loading error:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  if (loading) {
+    return <div style={{ padding: '50px', textAlign: 'center' }}>Loading results...</div>;
   }
 
-  const loadReports = async () => {
-    try {
-      const data = await listReports(Number(runId))
-      setReports(data.reports)
-    } catch (err) {
-      console.error('Failed to load reports:', err)
-    }
-  }
-
-  const handleGenerateMemo = async () => {
-    try {
-      setError('')
-      setGenerating('memo')
-      await generateMemo(Number(runId))
-      await loadReports()
-      setGenerating(null)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to generate memo')
-      setGenerating(null)
-    }
-  }
-
-  const handleGenerateDeck = async () => {
-    try {
-      setError('')
-      setGenerating('deck')
-      await generateDeck(Number(runId))
-      await loadReports()
-      setGenerating(null)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to generate deck')
-      setGenerating(null)
-    }
-  }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
-
-  if (!results) {
-    return (
-      <Container>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    )
+  if (error || !results) {
+    return <div style={{ padding: '50px', textAlign: 'center', color: 'red' }}>{error || 'Results not found'}</div>;
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <Button startIcon={<ArrowBack />} onClick={() => navigate('/')}>
-            Back
-          </Button>
-          <Typography variant="h4">
-            Diagnostic Results
-          </Typography>
-        </Box>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
+      <h1 style={{ marginBottom: '30px' }}>Profit Reset Results</h1>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Mode and Confidence */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Operating Mode
-              </Typography>
-              <Chip
-                label={results.mode}
-                color="primary"
-                size="large"
-                sx={{ fontSize: '1rem', py: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Confidence Level
-              </Typography>
-              <Chip
-                label={`${(results.confidence_score * 100).toFixed(0)}%`}
-                color={results.confidence_score > 0.7 ? 'success' : 'warning'}
-                size="large"
-                sx={{ fontSize: '1rem', py: 2 }}
-              />
-            </Grid>
-          </Grid>
-        </Paper>
-
-        {/* Key Metrics */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Key Metrics
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Grid container spacing={2}>
-            {results.analytics_facts.slice(0, 6).map((fact, idx) => (
-              <Grid item xs={12} sm={6} md={4} key={idx}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="caption" color="text.secondary" gutterBottom>
-                      {fact.label}
-                    </Typography>
-                    <Typography variant="h6">
-                      {fact.unit === 'currency' && fact.value
-                        ? formatCurrency(fact.value)
-                        : fact.unit === 'percentage' && fact.value
-                        ? `${fact.value.toFixed(1)}%`
-                        : fact.value || fact.value_text || 'N/A'}
-                    </Typography>
-                    {fact.period && (
-                      <Typography variant="caption" color="text.secondary">
-                        {fact.period}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-
-        {/* Initiatives */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Recommended Initiatives
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          
-          {results.initiatives.map((initiative) => (
-            <Card 
-              key={initiative.initiative_id} 
-              sx={{ 
-                mb: 2,
-                border: initiative.lane === 'sandbox' ? '2px dashed' : undefined,
-                borderColor: initiative.lane === 'sandbox' ? 'warning.main' : undefined
-              }} 
-              variant="outlined"
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
-                  <Chip label={`#${initiative.rank}`} color="primary" size="small" />
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6">
-                      {initiative.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      <Chip label={initiative.category} size="small" />
-                      {initiative.lane === 'sandbox' && (
-                        <Chip 
-                          label="🧪 Sandbox / Experimental" 
-                          size="small" 
-                          color="warning"
-                          variant="outlined"
-                        />
-                      )}
-                      {initiative.specificity_draft && (
-                        <Chip 
-                          label={initiative.specificity_draft.specificity_level}
-                          size="small"
-                          color={
-                            initiative.specificity_draft.specificity_level === 'DETAILED' ? 'success' :
-                            initiative.specificity_draft.specificity_level === 'SPECIFIC' ? 'info' :
-                            'default'
-                          }
-                          variant="outlined"
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                  {initiative.impact_mid && (
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Estimated Impact
-                      </Typography>
-                      <Typography variant="h6" color="success.main">
-                        {formatCurrency(initiative.impact_low || 0)} - {formatCurrency(initiative.impact_high || 0)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        annual
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                {initiative.explanation && (
-                  <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
-                    {initiative.explanation}
-                  </Typography>
-                )}
-
-                {/* Specificity Draft */}
-                {initiative.specificity_draft && (
-                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-                      Action Plan
-                    </Typography>
-                    
-                    {initiative.specificity_draft.what && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                          What:
-                        </Typography>
-                        <Typography variant="body2">
-                          {initiative.specificity_draft.what}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {initiative.specificity_draft.where && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                          Where/Scope:
-                        </Typography>
-                        <Typography variant="body2">
-                          {initiative.specificity_draft.where}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {initiative.specificity_draft.how_much && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                          Target:
-                        </Typography>
-                        <Typography variant="body2">
-                          {initiative.specificity_draft.how_much}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {initiative.specificity_draft.timing && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                          Timing:
-                        </Typography>
-                        <Typography variant="body2">
-                          {initiative.specificity_draft.timing}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {initiative.specificity_draft.next_steps && initiative.specificity_draft.next_steps.length > 0 && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                          Next Steps:
-                        </Typography>
-                        <List dense>
-                          {initiative.specificity_draft.next_steps.map((step, idx) => (
-                            <ListItem key={idx} sx={{ py: 0, pl: 2 }}>
-                              <ListItemText
-                                primary={`${idx + 1}. ${step}`}
-                                primaryTypographyProps={{ variant: 'body2' }}
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Box>
-                    )}
-
-                    {initiative.specificity_draft.data_needed && initiative.specificity_draft.data_needed.length > 0 && (
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="warning.main" fontWeight="bold">
-                          Data Needed:
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {initiative.specificity_draft.data_needed.join(', ')}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-
-                {initiative.assumptions && initiative.assumptions.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                      Key Assumptions:
-                    </Typography>
-                    <List dense>
-                      {initiative.assumptions.map((assumption, idx) => (
-                        <ListItem key={idx} sx={{ py: 0 }}>
-                          <ListItemText
-                            primary={`• ${assumption}`}
-                            primaryTypographyProps={{ variant: 'caption' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-
-                {initiative.data_gaps && initiative.data_gaps.length > 0 && (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" color="warning.main" fontWeight="bold">
-                      Data Gaps:
-                    </Typography>
-                    <List dense>
-                      {initiative.data_gaps.map((gap, idx) => (
-                        <ListItem key={idx} sx={{ py: 0 }}>
-                          <ListItemText
-                            primary={`• ${gap}`}
-                            primaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </Paper>
-
-        {/* Reports */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Reports & Downloads
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={<Description />}
-                onClick={handleGenerateMemo}
-                disabled={generating === 'memo'}
+      {/* Top 4 Core Initiatives */}
+      <section style={{ marginBottom: '40px' }}>
+        <h2 style={{ marginBottom: '20px', fontSize: '1.8rem', borderBottom: '3px solid #007bff', paddingBottom: '10px' }}>
+          Top 4 Core Initiatives
+        </h2>
+        {results.core_initiatives && results.core_initiatives.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {results.core_initiatives.map((initiative, idx) => (
+              <div
+                key={initiative.id}
+                style={{
+                  backgroundColor: 'white',
+                  padding: '25px',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  borderLeft: '4px solid #007bff',
+                }}
               >
-                {generating === 'memo' ? 'Generating...' : 'Generate Executive Memo'}
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={<Slideshow />}
-                onClick={handleGenerateDeck}
-                disabled={generating === 'deck'}
-              >
-                {generating === 'deck' ? 'Generating...' : 'Generate PowerPoint Deck'}
-              </Button>
-            </Grid>
-          </Grid>
-
-          {reports.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Available Reports
-              </Typography>
-              <List>
-                {reports.map((report) => (
-                  <ListItem
-                    key={report.report_id}
-                    secondaryAction={
-                      <Button
-                        startIcon={<Download />}
-                        href={downloadReport(report.report_id)}
-                        target="_blank"
-                      >
-                        Download
-                      </Button>
-                    }
+              <h3 style={{ marginBottom: '15px', fontSize: '1.3rem', color: '#007bff' }}>
+                {idx + 1}. {initiative.title}
+              </h3>
+              {initiative.body && initiative.body.why_now && (
+                <p style={{ marginBottom: '15px', color: '#666', fontStyle: 'italic' }}>
+                  <strong>Why now:</strong> {initiative.body.why_now}
+                </p>
+              )}
+              {initiative.body && initiative.body.steps && Array.isArray(initiative.body.steps) && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ display: 'block', marginBottom: '8px' }}>Steps:</strong>
+                  <ul style={{ marginLeft: '20px' }}>
+                    {initiative.body.steps.map((step: string, i: number) => (
+                      <li key={i} style={{ marginBottom: '5px' }}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {initiative.body.how_to_measure && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ display: 'block', marginBottom: '8px' }}>How to measure:</strong>
+                  <ul style={{ marginLeft: '20px' }}>
+                    {initiative.body.how_to_measure.map((measure: string, i: number) => (
+                      <li key={i} style={{ marginBottom: '5px' }}>{measure}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {initiative.body && initiative.body.confidence_label && (
+                <div style={{ marginTop: '10px' }}>
+                  <span
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '0.85rem',
+                      backgroundColor:
+                        initiative.body.confidence_label === 'HIGH'
+                          ? '#d4edda'
+                          : initiative.body.confidence_label === 'MEDIUM'
+                          ? '#fff3cd'
+                          : '#f8d7da',
+                      color:
+                        initiative.body.confidence_label === 'HIGH'
+                          ? '#155724'
+                          : initiative.body.confidence_label === 'MEDIUM'
+                          ? '#856404'
+                          : '#721c24',
+                    }}
                   >
-                    <ListItemText
-                      primary={report.report_type === 'memo' ? 'Executive Memo' : 'PowerPoint Deck'}
-                      secondary={new Date(report.created_at).toLocaleString()}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-        </Paper>
-      </Box>
-    </Container>
-  )
-}
+                    {initiative.body.confidence_label} Confidence
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+          </div>
+        ) : (
+          <p style={{ color: '#666', fontStyle: 'italic' }}>No core initiatives generated yet.</p>
+        )}
+      </section>
 
-export default ResultsPage
+      {/* Sandbox Experiments */}
+      <section style={{ marginBottom: '40px' }}>
+        <h2 style={{ marginBottom: '20px', fontSize: '1.8rem', borderBottom: '3px solid #ffc107', paddingBottom: '10px' }}>
+          Sandbox / Experimental
+        </h2>
+        {results.sandbox_initiatives && results.sandbox_initiatives.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {results.sandbox_initiatives.map((initiative) => (
+              <div
+              key={initiative.id}
+              style={{
+                backgroundColor: '#fff9e6',
+                padding: '25px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                borderLeft: '4px solid #ffc107',
+              }}
+            >
+              <h3 style={{ marginBottom: '15px', fontSize: '1.3rem', color: '#856404' }}>
+                {initiative.title}
+              </h3>
+              {initiative.body && initiative.body.why_this_came_up && (
+                <p style={{ marginBottom: '10px', color: '#666' }}>
+                  <strong>Why this came up:</strong> {initiative.body.why_this_came_up}
+                </p>
+              )}
+              {initiative.body && initiative.body.why_speculative && (
+                <p style={{ marginBottom: '15px', color: '#856404', fontStyle: 'italic' }}>
+                  <strong>Why speculative:</strong> {initiative.body.why_speculative}
+                </p>
+              )}
+              {initiative.body && initiative.body.test_plan && Array.isArray(initiative.body.test_plan) && (
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ display: 'block', marginBottom: '8px' }}>Test plan:</strong>
+                    <ul style={{ marginLeft: '20px' }}>
+                      {initiative.body.test_plan.map((step: string, i: number) => (
+                      <li key={i} style={{ marginBottom: '5px' }}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {initiative.body && initiative.body.stop_conditions && Array.isArray(initiative.body.stop_conditions) && (
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ display: 'block', marginBottom: '8px' }}>Stop conditions:</strong>
+                    <ul style={{ marginLeft: '20px' }}>
+                      {initiative.body.stop_conditions.map((condition: string, i: number) => (
+                      <li key={i} style={{ marginBottom: '5px' }}>{condition}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {initiative.body && initiative.body.how_to_measure && Array.isArray(initiative.body.how_to_measure) && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ display: 'block', marginBottom: '8px' }}>How to measure:</strong>
+                  <ul style={{ marginLeft: '20px' }}>
+                    {initiative.body.how_to_measure.map((measure: string, i: number) => (
+                      <li key={i} style={{ marginBottom: '5px' }}>{measure}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+          </div>
+        ) : (
+          <p style={{ color: '#666', fontStyle: 'italic' }}>No sandbox initiatives generated yet.</p>
+        )}
+      </section>
+    </div>
+  );
+}
