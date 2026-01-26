@@ -25,7 +25,7 @@ def score_categories(
     logger = logging.getLogger(__name__)
     logger.info("📊 Step 1: Calling LLM for category scoring...")
     client = LLMClient()
-    response = client.generate(prompt, json_mode=True)
+    response = client.generate(prompt, json_mode=True, schema_name="category_scores")
     
     # Check if response looks like mock (placeholder) vs real LLM
     is_mock = "placeholder" in response.lower() or response.strip() == "{}"

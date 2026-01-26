@@ -6,7 +6,7 @@ import logging
 import os
 import json
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,8 @@ class LLMClient:
         self, 
         prompt: str, 
         system_prompt: Optional[str] = None, 
-        json_mode: bool = False
+        json_mode: bool = False,
+        schema_name: Optional[str] = None
     ) -> str:
         """
         Generate text using the configured LLM provider.
@@ -69,7 +70,7 @@ class LLMClient:
         
         elif self.provider == "openai":
             logger.info("Using OPENAI mode - attempting API call")
-            return self._openai_generate(prompt, system_prompt, json_mode)
+            return self._openai_generate(prompt, system_prompt, json_mode, schema_name)
         
         else:
             logger.error("Unknown provider: %s. Falling back to mock.", self.provider)
@@ -79,7 +80,8 @@ class LLMClient:
         self, 
         prompt: str, 
         system_prompt: Optional[str], 
-        json_mode: bool
+        json_mode: bool,
+        schema_name: Optional[str] = None
     ) -> str:
         """Generate using OpenAI API. Falls back to mock on any error."""
         from openai import OpenAI
@@ -89,23 +91,41 @@ class LLMClient:
             logger.warning("No API key available. Falling back to mock.")
             return self._mock_generate(prompt, json_mode)
         
-        # Get model from env (default to gpt-4o which is reliable)
+        # Get model from env (default gpt-4o; use gpt-4o-mini for faster responses if you hit timeouts)
         model = os.getenv("LLM_MODEL", "gpt-4o").strip()
         
-        logger.info("🚀 Calling OpenAI API")
-        logger.info("  Model: %s", model)
+        # Check if model supports Structured Outputs (gpt-4o, gpt-4o-mini, gpt-4o-2024-08-06)
+        supports_structured_outputs = any(
+            model.startswith(prefix) 
+            for prefix in ["gpt-4o", "gpt-4o-mini", "gpt-4o-2024"]
+        )
+        
+        # Log immediately and force flush so user sees output before blocking call
+        import sys
+        # gpt-4-turbo-preview often needs 90–120s for core/sandbox JSON; gpt-4o-mini is faster
+        timeout_s = 120
+        print("[OPENAI] Calling API (model=%s, timeout=%ds)..." % (model, timeout_s), file=sys.stderr, flush=True)
+        logger.info("🚀 Calling OpenAI API (model=%s, timeout=%ds)", model, timeout_s)
         logger.info("  Prompt length: %d chars", len(prompt))
-        logger.info("  System prompt: %s", "yes" if system_prompt else "no")
-        logger.info("  JSON mode: %s", json_mode)
+        logger.info("  System prompt: %s, JSON mode: %s, Schema: %s", 
+                   "yes" if system_prompt else "no", json_mode, schema_name or "none")
         
         start_time = time.time()
         
         try:
-            # Create OpenAI client - simple, let it handle HTTP
+            # Create httpx client explicitly to avoid compatibility issues
+            import httpx
+            http_client = httpx.Client(
+                timeout=httpx.Timeout(timeout_s, connect=5.0),
+                follow_redirects=True,
+            )
+            
+            # Create OpenAI client with explicit http_client
             client = OpenAI(
                 api_key=self.api_key,
-                timeout=90.0,  # 90 second timeout (generous for complex prompts)
-                max_retries=2,  # Retry up to 2 times for transient errors
+                http_client=http_client,
+                timeout=float(timeout_s),
+                max_retries=0,
             )
             
             # Build messages
@@ -120,12 +140,89 @@ class LLMClient:
                 "messages": messages,
                 "temperature": 0.7,
             }
-            if json_mode:
+            
+            # Use Structured Outputs for gpt-4o models when schema is provided
+            if json_mode and schema_name and supports_structured_outputs:
+                from app.llm.json_guard import load_schema
+                schema = load_schema(schema_name)
+                
+                # OpenAI Structured Outputs requires:
+                # 1. Root to be an object (not array)
+                # 2. ALL nested objects must have additionalProperties: false
+                def fix_schema_for_openai(s: Any) -> Any:
+                    """Recursively fix schema for OpenAI Structured Outputs:
+                    - Add additionalProperties: false to all objects
+                    - Add items property to arrays that are missing it
+                    """
+                    if isinstance(s, dict):
+                        result = {}
+                        for key, value in s.items():
+                            if key == "items":
+                                # Recursively fix nested items
+                                result[key] = fix_schema_for_openai(value)
+                            elif key == "properties":
+                                # Recursively fix all properties
+                                result[key] = {k: fix_schema_for_openai(v) for k, v in value.items()}
+                            else:
+                                result[key] = fix_schema_for_openai(value) if isinstance(value, (dict, list)) else value
+                        
+                        # If this is an array type, ensure it has an items property
+                        if s.get("type") == "array" and "items" not in result:
+                            # Default to string array if items is missing
+                            result["items"] = {"type": "string"}
+                            logger.warning("  Added missing 'items' property to array (defaulting to string)")
+                        
+                        # If this is an object type, ensure additionalProperties is False
+                        if s.get("type") == "object" and "additionalProperties" not in result:
+                            result["additionalProperties"] = False
+                        
+                        return result
+                    elif isinstance(s, list):
+                        return [fix_schema_for_openai(item) for item in s]
+                    else:
+                        return s
+                
+                schema = fix_schema_for_openai(schema)
+                
+                # If schema is an array, wrap it in an object
+                if schema.get("type") == "array":
+                    wrapped_schema = {
+                        "type": "object",
+                        "properties": {
+                            "items": schema
+                        },
+                        "required": ["items"],
+                        "additionalProperties": False
+                    }
+                    schema = wrapped_schema
+                    logger.info("  Wrapped array schema in object for Structured Outputs")
+                
+                kwargs["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": schema_name,
+                        "strict": True,
+                        "schema": schema
+                    }
+                }
+                logger.info("  Using Structured Outputs with schema: %s", schema_name)
+            elif json_mode:
+                # Fallback to json_object for older models
                 kwargs["response_format"] = {"type": "json_object"}
+                if supports_structured_outputs:
+                    logger.warning("  ⚠️  Model supports Structured Outputs but no schema provided. Using json_object mode (may have issues with arrays).")
             
             # Make API call
-            logger.info("📡 Sending request to OpenAI...")
-            response = client.chat.completions.create(**kwargs)
+            print("[OPENAI] Sending request (timeout %ds)..." % timeout_s, file=sys.stderr, flush=True)
+            logger.info("📡 Sending request to OpenAI (timeout %ds)...", timeout_s)
+            try:
+                response = client.chat.completions.create(**kwargs)
+            except Exception as api_call_err:
+                elapsed = time.time() - start_time
+                err_str = str(api_call_err)
+                print("[OPENAI] ERROR after %.1fs: %s" % (elapsed, err_str), file=sys.stderr, flush=True)
+                logger.error("❌ OPENAI API CALL FAILED after %.1fs: %s", elapsed, err_str)
+                raise
             
             elapsed = time.time() - start_time
             content = response.choices[0].message.content
@@ -133,10 +230,26 @@ class LLMClient:
             if not content:
                 raise ValueError("OpenAI returned empty response")
             
+            # If we used Structured Outputs with a wrapped array schema, unwrap it
+            if json_mode and schema_name and supports_structured_outputs:
+                try:
+                    import json
+                    parsed = json.loads(content)
+                    # If response is wrapped in {"items": [...]}, extract the array
+                    if isinstance(parsed, dict) and "items" in parsed and isinstance(parsed["items"], list):
+                        content = json.dumps(parsed["items"])
+                        logger.info("  Unwrapped array from Structured Outputs response")
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    # If unwrapping fails, return content as-is (validation will catch it)
+                    pass
+            
             logger.info("✅ OpenAI API SUCCESS")
             logger.info("  Response time: %.2f seconds", elapsed)
             logger.info("  Response length: %d characters", len(content))
             logger.info("  First 100 chars: %s", content[:100])
+            
+            # Close http_client
+            http_client.close()
             
             return content
             
@@ -145,17 +258,89 @@ class LLMClient:
             error_type = type(e).__name__
             error_msg = str(e)
             
-            logger.error("❌ OpenAI API FAILED")
-            logger.error("  Error type: %s", error_type)
-            logger.error("  Error message: %s", error_msg[:500])
-            logger.error("  Time elapsed: %.2f seconds", elapsed)
-            
-            # Log full traceback for debugging
+            # Log full error details at ERROR level (not debug)
             import traceback
-            logger.debug("Full traceback:\n%s", traceback.format_exc())
+            full_traceback = traceback.format_exc()
+            
+            # Print to stderr immediately so user sees error even if logs buffer
+            print("\n[OPENAI] ERROR after %.1fs: %s" % (elapsed, error_msg), file=sys.stderr, flush=True)
+            print("[OPENAI] Falling back to MOCK data", file=sys.stderr, flush=True)
+            
+            logger.error("\n" + "=" * 80)
+            logger.error("❌ OPENAI API ERROR")
+            logger.error("=" * 80)
+            logger.error("ERROR TYPE: %s", error_type)
+            logger.error("ERROR MESSAGE: %s", error_msg)
+            logger.error("TIME ELAPSED: %.2f seconds", elapsed)
+            logger.error("MODEL: %s", model)
+            logger.error("API KEY PRESENT: %s", bool(self.api_key))
+            if self.api_key:
+                logger.error("API KEY PREFIX: %s...", self.api_key[:15])
+            logger.error("PROMPT LENGTH: %d characters", len(prompt))
+            logger.error("JSON MODE: %s", json_mode)
+            logger.error("")
+            logger.error("FULL TRACEBACK:")
+            logger.error(full_traceback)
+            logger.error("=" * 80)
+            
+            # Categorize error for better visibility
+            error_lower = error_msg.lower()
+            if "timeout" in error_lower or "timed out" in error_lower or error_type == "APITimeoutError":
+                logger.error("🔴 ERROR CATEGORY: TIMEOUT")
+                logger.error("   OpenAI request exceeded timeout (check backend timeout setting)")
+                logger.error("   Possible causes:")
+                logger.error("     - Network connectivity issues")
+                logger.error("     - OpenAI API is slow or overloaded")
+                logger.error("     - Prompt is too large/complex")
+                logger.error("     - Model is taking longer than expected")
+            elif "connection" in error_lower or "connect" in error_lower or "network" in error_lower:
+                logger.error("🔴 ERROR CATEGORY: CONNECTION")
+                logger.error("   Cannot establish connection to OpenAI API")
+                logger.error("   Possible causes:")
+                logger.error("     - Network/DNS issues (check docker DNS settings)")
+                logger.error("     - Firewall blocking api.openai.com")
+                logger.error("     - OpenAI API is down")
+                logger.error("     - Docker container cannot reach external APIs")
+            elif "api key" in error_lower or "authentication" in error_lower or "401" in error_lower or "unauthorized" in error_lower:
+                logger.error("🔴 ERROR CATEGORY: AUTHENTICATION")
+                logger.error("   Invalid or missing OpenAI API key")
+                logger.error("   Check:")
+                logger.error("     - OPENAI_API_KEY in .env file")
+                logger.error("     - LLM_API_KEY in .env file")
+                logger.error("     - API key is correctly loaded in docker-compose.yml")
+                logger.error("     - API key is valid and not expired")
+            elif "rate limit" in error_lower or "429" in error_lower:
+                logger.error("🔴 ERROR CATEGORY: RATE LIMIT")
+                logger.error("   Too many requests to OpenAI API")
+                logger.error("   Solution: Wait a few minutes and try again")
+            elif "quota" in error_lower or "billing" in error_lower:
+                logger.error("🔴 ERROR CATEGORY: QUOTA/BILLING")
+                logger.error("   OpenAI account has exceeded quota or billing issue")
+                logger.error("   Check your OpenAI account billing and usage limits")
+            else:
+                logger.error("🔴 ERROR CATEGORY: UNKNOWN")
+                logger.error("   Unexpected error occurred")
+                logger.error("   Error details: %s", error_msg)
+            
+            logger.error("")
+            logger.error("⚠️  FALLING BACK TO MOCK DATA")
+            logger.error("   Generation will continue with placeholder responses")
+            logger.error("   Check logs above for the actual OpenAI error")
+            logger.error("=" * 80 + "\n")
+            
+            # Force flush logs to ensure they're visible immediately
+            import sys
+            sys.stderr.flush()
+            sys.stdout.flush()
+            
+            # Close http_client if it was created
+            try:
+                if 'http_client' in locals():
+                    http_client.close()
+            except Exception:
+                pass
             
             # Always fall back to mock - don't break the app
-            logger.warning("⚠️  Falling back to MOCK data")
             return self._mock_generate(prompt, json_mode)
     
     def _mock_generate(self, prompt: str, json_mode: bool) -> str:

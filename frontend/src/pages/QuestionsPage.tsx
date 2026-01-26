@@ -82,12 +82,12 @@ export default function QuestionsPage() {
       // Save questionnaire
       await api.saveQuestionnaire(cycleId, responses);
       
-      // Generate results (with timeout; 4 LLM steps can take 60–90s with OpenAI)
+      // Generate results (backend timeout 120s per OpenAI call; 4 steps, mock fallback on fail)
       console.log('Starting generation for cycle:', cycleId);
       const generatePromise = api.generate(cycleId);
-      const timeoutMs = 90_000;
+      const timeoutMs = 150_000; // 150s; backend 120s per call
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Generation timed out after ${timeoutMs / 1000} seconds. Check backend logs for details.`)), timeoutMs)
+        setTimeout(() => reject(new Error(`Generation timed out after ${timeoutMs / 1000} seconds. Check backend logs (docker compose logs api) for [OPENAI] / [GENERATE] messages.`)), timeoutMs)
       );
 
       const result = await Promise.race([generatePromise, timeoutPromise]);
@@ -287,12 +287,12 @@ export default function QuestionsPage() {
             fontWeight: 'bold',
           }}
         >
-          {saving ? 'Generating... (this may take 30-90 seconds)' : 'Submit & Generate Results'}
+          {saving ? 'Generating... (up to ~2 min per step; watch docker logs for [OPENAI])' : 'Submit & Generate Results'}
         </button>
         
         {saving && (
           <div style={{ marginTop: '15px', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>
-            Generating initiatives... Check browser console (F12) for progress or errors.
+            Generating... Run <code>docker compose logs -f api</code> to see [GENERATE] / [OPENAI] progress.
           </div>
         )}
       </div>

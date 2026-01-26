@@ -76,13 +76,21 @@ RULES:
 - You may NOT invent categories
 - No financial math, no dollar or percent symbols
 - No numeric claims in rationale (only cite question IDs and signals)
-- Return JSON array with exactly 10 entries matching this schema:
+- Return a JSON array with exactly 10 entries matching this schema:
   - category_id (must be from the list above)
-  - score (0-100)
-  - confidence (0-1)
+  - score (0-100, integer)
+  - confidence (0-1, number)
   - rationale (string, no numbers except question IDs)
 
-Return only valid JSON array."""
+CRITICAL: You MUST return a JSON array with exactly 10 objects. Each object represents one category score.
+Example format:
+[
+  {{"category_id": "labor_scheduling", "score": 85, "confidence": 0.9, "rationale": "..."}},
+  {{"category_id": "service_speed", "score": 70, "confidence": 0.8, "rationale": "..."}},
+  ... (8 more entries, one for each of the 10 categories)
+]
+
+Output ONLY a valid JSON array starting with [ and ending with ]. Do not wrap in an object. No markdown, no code blocks."""
 
 
 def build_core_initiative_expansion_prompt(
@@ -131,9 +139,18 @@ RULES:
 - Include measurement that can be tracked manually
 - NO numbers, NO money, NO percentages
 - If constraints include constraint_no_pricing_control, avoid pricing change initiatives or frame as validation only
-- Return JSON array with exactly 4 entries
+- Return a JSON array with exactly 4 entries (one per selected category).
 
-Return only valid JSON array."""
+CRITICAL: You MUST return a JSON array with exactly 4 objects. Each object represents one core initiative.
+Example format:
+[
+  {{"category_id": "labor_scheduling", "title": "...", "why_now": "...", "steps": [...], "how_to_measure": [...], "assumptions": [...], "confidence_label": "HIGH"}},
+  {{"category_id": "discounting_discipline", "title": "...", "why_now": "...", "steps": [...], "how_to_measure": [...], "assumptions": [...], "confidence_label": "MEDIUM"}},
+  {{"category_id": "manager_cadence", "title": "...", "why_now": "...", "steps": [...], "how_to_measure": [...], "assumptions": [...], "confidence_label": "HIGH"}},
+  {{"category_id": "marketing_ownership", "title": "...", "why_now": "...", "steps": [...], "how_to_measure": [...], "assumptions": [...], "confidence_label": "MEDIUM"}}
+]
+
+Output ONLY a valid JSON array starting with [ and ending with ]. Do not wrap in an object. No markdown, no code blocks."""
 
 
 def build_sandbox_prompt(
@@ -178,6 +195,14 @@ RULES:
 - Must be reversible in 30 days
 - Must include stop conditions
 - NO numbers, money, or percent
-- Return JSON array with exactly 3 entries
+- Return a JSON array with exactly 3 entries.
 
-Return only valid JSON array."""
+CRITICAL: You MUST return a JSON array with exactly 3 objects. Each object represents one sandbox experiment.
+Example format:
+[
+  {{"title": "...", "why_this_came_up": "...", "why_speculative": "...", "test_plan": [...], "stop_conditions": [...], "how_to_measure": [...], "confidence_label": "LOW"}},
+  {{"title": "...", "why_this_came_up": "...", "why_speculative": "...", "test_plan": [...], "stop_conditions": [...], "how_to_measure": [...], "confidence_label": "LOW"}},
+  {{"title": "...", "why_this_came_up": "...", "why_speculative": "...", "test_plan": [...], "stop_conditions": [...], "how_to_measure": [...], "confidence_label": "LOW"}}
+]
+
+Output ONLY a valid JSON array starting with [ and ending with ]. Do not wrap in an object. No markdown, no code blocks."""

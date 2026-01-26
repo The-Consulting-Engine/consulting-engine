@@ -28,7 +28,7 @@ def expand_core_initiatives(
     
     logger.info("📝 Step 3: Calling LLM for core initiative expansion...")
     client = LLMClient()
-    response = client.generate(prompt, json_mode=True)
+    response = client.generate(prompt, json_mode=True, schema_name="core_initiatives")
     
     # Check if response looks like mock (placeholder) vs real LLM
     is_mock = "placeholder" in response.lower() or response.strip() == "{}"
@@ -71,7 +71,7 @@ def generate_sandbox_initiatives(
     
     logger.info("🧪 Step 4: Calling LLM for sandbox initiative generation...")
     client = LLMClient()
-    response = client.generate(prompt, json_mode=True)
+    response = client.generate(prompt, json_mode=True, schema_name="sandbox_initiatives")
     
     # Check if response looks like mock (placeholder) vs real LLM
     is_mock = "placeholder" in response.lower() or response.strip() == "{}"

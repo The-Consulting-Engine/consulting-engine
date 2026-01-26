@@ -1,7 +1,10 @@
 import json
 import jsonschema
+import logging
 from typing import Dict, Any, List
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def load_schema(schema_name: str) -> Dict[str, Any]:
@@ -16,6 +19,18 @@ def load_schema(schema_name: str) -> Dict[str, Any]:
         return json.load(f)
 
 
+def _unwrap_single_key_array(data: Any) -> Any:
+    """
+    GPT-4 with json_object often wraps arrays in an object (e.g. {"initiatives": [...]}).
+    If we get a single-key dict whose value is a list, unwrap and return that list.
+    """
+    if isinstance(data, dict) and len(data) == 1:
+        (val,) = data.values()
+        if isinstance(val, list):
+            return val
+    return data
+
+
 def validate_and_parse_json(
     json_string: str,
     schema_name: str,
@@ -24,19 +39,43 @@ def validate_and_parse_json(
     """
     Validate JSON string against schema and return parsed object.
     Retries once on failure, then falls back to mock if still failing.
+    Unwraps single-key objects (e.g. {"initiatives": [...]}) so GPT-4 json_object output matches array schemas.
     """
     try:
-        # Try to parse JSON
         data = json.loads(json_string)
-        
-        # Load and validate schema
+        data = _unwrap_single_key_array(data)
+
         schema = load_schema(schema_name)
-        jsonschema.validate(instance=data, schema=schema)
         
+        # Check if schema expects array but we got a single object
+        if schema.get("type") == "array" and isinstance(data, dict) and not isinstance(data, list):
+            expected_count = schema.get("minItems", schema.get("maxItems", "multiple"))
+            logger.error(
+                "❌ GPT returned a SINGLE OBJECT instead of an ARRAY for %s. Expected array with %s items, got 1 object.",
+                schema_name,
+                expected_count,
+            )
+            logger.error("   This usually means GPT-4-turbo with json_object mode only generated one item.")
+            logger.error("   The prompt should explicitly request an array with multiple items.")
+            raise ValueError(
+                f"Expected array with {expected_count} items for {schema_name}, but got single object. "
+                f"GPT likely only generated one item instead of the required {expected_count}."
+            )
+        
+        jsonschema.validate(instance=data, schema=schema)
+
         return data
-    except (json.JSONDecodeError, jsonschema.ValidationError) as e:
+    except (json.JSONDecodeError, jsonschema.ValidationError, ValueError) as e:
+        preview = (json_string or "")[:500]
+        if len(json_string or "") > 500:
+            preview += "... [truncated]"
+        logger.warning(
+            "⚠️  JSON validation failed for %s: %s. Using placeholder data.",
+            schema_name,
+            str(e),
+        )
+        logger.warning("   Raw response preview: %s", preview)
         if retry_on_failure:
-            # Return mock data on failure
             return get_mock_data(schema_name)
         raise ValueError(f"JSON validation failed: {str(e)}")
 
