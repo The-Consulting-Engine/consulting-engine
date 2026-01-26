@@ -1,6 +1,6 @@
 # Consulting Engine MVP 0.1
 
-AI-native consulting replacement for restaurants. This MVP is questionnaire-only (no uploads, no scraping, no analytics). It outputs Top 5 Core initiatives + 2 Sandbox experiments and an owner-friendly memo.
+AI-native consulting replacement for restaurants. This MVP is questionnaire-only (no uploads, no scraping, no analytics). It outputs Top 4 Core initiatives + 3 Sandbox experiments.
 
 ## Quick Start
 
@@ -51,8 +51,9 @@ AI-native consulting replacement for restaurants. This MVP is questionnaire-only
 Create a `.env` file in the root directory:
 
 ```env
-LLM_PROVIDER=mock  # or "openai"
-LLM_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
+LLM_PROVIDER=openai  # or "mock" for testing
+OPENAI_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o  # or gpt-4o-mini for faster responses
 ```
 
 ## Make Commands
@@ -67,9 +68,8 @@ LLM_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
 ✅ Questionnaire-based intake
 ✅ Deterministic signal derivation
 ✅ LLM-powered category scoring (10 fixed categories)
-✅ Top 5 core initiatives generation
-✅ 2 sandbox experiments generation
-✅ Owner-friendly memo generation
+✅ Top 4 core initiatives generation
+✅ 3 sandbox experiments generation
 ✅ Numeric guardrails (no $, %, or large numbers)
 ✅ Mock LLM mode for local development
 ✅ Full Docker setup
@@ -81,7 +81,6 @@ LLM_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
 - **questionnaire_responses**: Questionnaire answers + derived signals
 - **category_scores**: LLM-scored categories
 - **initiatives**: Core and sandbox initiatives
-- **memos**: Generated memos
 
 ## API Endpoints
 
@@ -91,7 +90,7 @@ LLM_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
 - `GET /api/cycles/{cycle_id}` - Get cycle
 - `GET /api/cycles/{cycle_id}/questionnaire` - Get questionnaire
 - `POST /api/cycles/{cycle_id}/questionnaire` - Save responses
-- `POST /api/cycles/{cycle_id}/generate` - Generate results
+- `POST /api/cycles/{cycle_id}/generate` - Generate results (4 core + 3 sandbox initiatives)
 - `GET /api/cycles/{cycle_id}/results` - Get results
 
 ## Development
@@ -99,3 +98,20 @@ LLM_API_KEY=your_key_here  # required if LLM_PROVIDER=openai
 The application runs in Docker Compose for local development. The backend API auto-reloads on code changes, and the frontend uses Vite's hot module replacement.
 
 **Schema changes during MVP:** Tables are created from SQLAlchemy models on startup. If you change models, run `make reset-db` to drop the DB volume and recreate tables. See `backend/REINTRODUCE_ALEMBIC.md` for the plan to bring back migrations later.
+
+## Question Types
+
+The questionnaire supports:
+- **single_select**: Dropdown selection
+- **multi_select**: Multiple checkboxes (with max_selected limit)
+- **ranking**: Drag-and-drop ranking (stores as ordered array)
+- **likert_1_5**: 1-5 scale rating
+- **short_text**: Short text input
+- **long_text**: Long text area
+
+## LLM Configuration
+
+- **Model**: Defaults to `gpt-4o` (supports Structured Outputs for reliable JSON)
+- **Structured Outputs**: Automatically used for `gpt-4o` models to ensure schema compliance
+- **Timeout**: 120 seconds per LLM call
+- **Fallback**: Mock mode if OpenAI fails or `LLM_PROVIDER=mock`
