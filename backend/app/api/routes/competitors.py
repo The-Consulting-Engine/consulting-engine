@@ -285,6 +285,7 @@ def _run_competitor_analysis(
             max_competitors=max_competitors,
             cuisine_override=[cuisine_type] if cuisine_type else None,
             generate_visualizations=True,
+            skip_target_scrape=use_owner_menu and owner_menu_df is not None,
         )
 
         # Run the async pipeline in a new event loop
@@ -294,6 +295,8 @@ def _run_competitor_analysis(
                 restaurant_name=restaurant_name,
                 address=address,
                 config=config,
+                owner_menu_items=owner_menu_df,
+                manual_competitors=valid_manual_competitors,
             )
 
         result = asyncio.run(run_pipeline())

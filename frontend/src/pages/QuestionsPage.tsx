@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, Questionnaire, Question } from '../api/client';
+import { api, Questionnaire, Question, MenuItemInput } from '../api/client';
 
 export default function QuestionsPage() {
   const { cycleId } = useParams<{ cycleId: string }>();
@@ -10,6 +10,10 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItemInput[]>([]);
+  const [menuUploaded, setMenuUploaded] = useState(false);
+  const [menuUploadMsg, setMenuUploadMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -24,6 +28,12 @@ export default function QuestionsPage() {
       
       // Preload default test answers for demo
       const defaultResponses: Record<string, any> = {
+        "R0_1_restaurant_name": "Thai Basil Kitchen",
+        "R0_2_address": "200 Crown St, New Haven, CT 06510",
+        "R0_3_cuisine_type": "Thai",
+        "R0_4_service_type": "Fast Casual",
+        "R0_5_price_tier": "$$ ($15-30)",
+        "R0_6_menu_input_method": "I'll enter items manually",
         "A0_1_concept_type": "Fast casual",
         "A0_2_order_channels_ranked": ["Walk-in / counter", "Online pickup", "Third-party delivery"],
         "A0_3_primary_dayparts": ["Lunch", "Dinner"],
@@ -110,6 +120,139 @@ export default function QuestionsPage() {
     }
   };
 
+  const handleCsvUpload = async (file: File) => {
+    if (!cycleId) return;
+    try {
+      setMenuUploadMsg(null);
+      const result = await api.uploadMenuCsv(cycleId, file);
+      setMenuUploaded(true);
+      setMenuUploadMsg(`Uploaded ${result.items_added} menu items`);
+    } catch (err) {
+      setMenuUploadMsg(err instanceof Error ? err.message : 'Upload failed');
+    }
+  };
+
+  const handleAddManualItem = () => {
+    setMenuItems([...menuItems, { item_name: '', price: '', category: '', description: '' }]);
+  };
+
+  const handleMenuItemChange = (index: number, field: keyof MenuItemInput, value: string) => {
+    const updated = [...menuItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setMenuItems(updated);
+  };
+
+  const handleRemoveMenuItem = (index: number) => {
+    setMenuItems(menuItems.filter((_, i) => i !== index));
+  };
+
+  const handleSaveManualMenu = async () => {
+    if (!cycleId) return;
+    const validItems = menuItems.filter((i) => i.item_name && i.price);
+    if (validItems.length === 0) {
+      setMenuUploadMsg('Add at least one item with name and price');
+      return;
+    }
+    try {
+      setMenuUploadMsg(null);
+      const result = await api.addMenuItems(cycleId, validItems);
+      setMenuUploaded(true);
+      setMenuUploadMsg(`Saved ${result.items_added} menu items`);
+    } catch (err) {
+      setMenuUploadMsg(err instanceof Error ? err.message : 'Save failed');
+    }
+  };
+
+  const renderMenuInput = () => {
+    const method = responses['R0_6_menu_input_method'];
+    if (!method || method === "Find my menu on Uber Eats (we'll scrape it)") return null;
+
+    return (
+      <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '8px', border: '1px solid #bee3f8' }}>
+        <h3 style={{ marginBottom: '15px', fontSize: '1.2rem' }}>Menu Items</h3>
+
+        {method === "I'll upload a CSV file" && (
+          <div>
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
+              Upload a CSV with columns: item_name, price (required), category, description (optional)
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleCsvUpload(file);
+              }}
+              style={{ marginBottom: '10px' }}
+            />
+          </div>
+        )}
+
+        {method === "I'll enter items manually" && (
+          <div>
+            {menuItems.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Item name"
+                  value={item.item_name}
+                  onChange={(e) => handleMenuItemChange(idx, 'item_name', e.target.value)}
+                  style={{ flex: 2, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Price (e.g. 12.99)"
+                  value={item.price}
+                  onChange={(e) => handleMenuItemChange(idx, 'price', e.target.value)}
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Category"
+                  value={item.category || ''}
+                  onChange={(e) => handleMenuItemChange(idx, 'category', e.target.value)}
+                  style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveMenuItem(idx)}
+                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', backgroundColor: 'white' }}
+                >
+                  x
+                </button>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={handleAddManualItem}
+                style={{ padding: '8px 16px', border: '1px solid #007bff', borderRadius: '4px', cursor: 'pointer', backgroundColor: 'white', color: '#007bff' }}
+              >
+                + Add Item
+              </button>
+              {menuItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSaveManualMenu}
+                  style={{ padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white' }}
+                >
+                  Save Menu Items
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {menuUploadMsg && (
+          <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '4px', backgroundColor: menuUploaded ? '#d4edda' : '#f8d7da', color: menuUploaded ? '#155724' : '#721c24' }}>
+            {menuUploadMsg}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderQuestion = (question: Question) => {
     const value = responses[question.id];
 
@@ -119,6 +262,9 @@ export default function QuestionsPage() {
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             {question.label} {question.required && <span style={{ color: 'red' }}>*</span>}
           </label>
+          {question.helper_text && (
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>{question.helper_text}</p>
+          )}
           <select
             value={value || ''}
             onChange={(e) => handleResponseChange(question.id, e.target.value)}
@@ -343,12 +489,53 @@ export default function QuestionsPage() {
       );
     }
 
-    if (question.type === 'short_text' || question.type === 'long_text') {
+    if (question.type === 'short_text') {
       return (
         <div key={question.id} style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             {question.label} {question.required && <span style={{ color: 'red' }}>*</span>}
           </label>
+          {question.helper_text && (
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>{question.helper_text}</p>
+          )}
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => {
+              const text = e.target.value;
+              if (!question.max_chars || text.length <= question.max_chars) {
+                handleResponseChange(question.id, text);
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '1rem',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+            }}
+            placeholder={question.placeholder || ''}
+          />
+          {question.max_chars && (
+            <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>
+              {(value || '').length} / {question.max_chars} characters
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (question.type === 'long_text') {
+      return (
+        <div key={question.id} style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            {question.label} {question.required && <span style={{ color: 'red' }}>*</span>}
+          </label>
+          {question.helper_text && (
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>{question.helper_text}</p>
+          )}
           <textarea
             value={value || ''}
             onChange={(e) => {
@@ -357,7 +544,7 @@ export default function QuestionsPage() {
                 handleResponseChange(question.id, text);
               }
             }}
-            rows={question.type === 'long_text' ? 6 : 3}
+            rows={6}
             style={{
               width: '100%',
               padding: '10px',
@@ -366,7 +553,7 @@ export default function QuestionsPage() {
               borderRadius: '4px',
               fontFamily: 'inherit',
             }}
-            placeholder={question.type === 'long_text' ? 'Enter your response...' : ''}
+            placeholder={question.placeholder || 'Enter your response...'}
           />
           {question.max_chars && (
             <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>
@@ -399,7 +586,19 @@ export default function QuestionsPage() {
             <h2 style={{ marginBottom: '20px', fontSize: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
               {section.title}
             </h2>
-            {section.questions.map((q) => renderQuestion(q))}
+            {section.description && (
+              <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '20px' }}>{section.description}</p>
+            )}
+            {section.questions
+              .filter((q) => {
+                // Hide questions whose depends_on field has no value
+                if (q.depends_on && !responses[q.depends_on]) return false;
+                return true;
+              })
+              .map((q) => renderQuestion(q))}
+
+            {/* Menu input UI after R0 section */}
+            {section.id === 'R0_restaurant_identity' && renderMenuInput()}
           </div>
         ))}
 

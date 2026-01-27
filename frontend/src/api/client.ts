@@ -32,6 +32,7 @@ export interface Questionnaire {
 export interface QuestionnaireSection {
   id: string;
   title: string;
+  description?: string;
   questions: Question[];
 }
 
@@ -48,6 +49,18 @@ export interface Question {
   helper_text?: string;
   ranking_min?: number;
   ranking_max?: number;
+  placeholder?: string;
+  depends_on?: string;
+}
+
+export interface CompetitorContext {
+  status: string;
+  positioning?: any;
+  premium_validation?: any;
+  competitive_gaps?: any[];
+  strategic_initiatives?: any[];
+  executive_summary?: string;
+  error_message?: string;
 }
 
 export interface Results {
@@ -56,6 +69,28 @@ export interface Results {
   category_scores: any[];
   core_initiatives: Initiative[];
   sandbox_initiatives: Initiative[];
+  competitor_context?: CompetitorContext;
+}
+
+export interface MenuItemInput {
+  item_name: string;
+  price: string;
+  category?: string;
+  description?: string;
+}
+
+export interface CompetitorAnalysisResponse {
+  cycle_id: string;
+  status: string;
+  restaurant_name?: string;
+  competitor_count?: number;
+  positioning_summary?: string;
+  positioning?: any;
+  premium_validation?: any;
+  competitive_gaps?: any[];
+  strategic_initiatives?: any[];
+  executive_summary?: string;
+  error_message?: string;
 }
 
 export interface Initiative {
@@ -134,4 +169,40 @@ export const api = {
 
   getResults: (cycleId: string) =>
     request<Results>(`/api/cycles/${cycleId}/results`),
+
+  // Menu endpoints
+  uploadMenuCsv: async (cycleId: string, file: File) => {
+    const base = API_URL || '';
+    const url = base ? `${base}/api/cycles/${cycleId}/menu/upload` : `/api/cycles/${cycleId}/menu/upload`;
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(url, { method: 'POST', body: formData });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error?.detail || `HTTP error ${response.status}`);
+    }
+    return response.json();
+  },
+
+  addMenuItems: (cycleId: string, items: MenuItemInput[]) =>
+    request(`/api/cycles/${cycleId}/menu/items`, {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
+
+  getMenuItems: (cycleId: string) =>
+    request<any[]>(`/api/cycles/${cycleId}/menu`),
+
+  clearMenu: (cycleId: string) =>
+    request(`/api/cycles/${cycleId}/menu`, { method: 'DELETE' }),
+
+  // Competitor analysis endpoints
+  enrichWithCompetitors: (cycleId: string, options?: { search_radius_meters?: number; max_competitors?: number }) =>
+    request(`/api/cycles/${cycleId}/enrich`, {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    }),
+
+  getCompetitors: (cycleId: string) =>
+    request<CompetitorAnalysisResponse>(`/api/cycles/${cycleId}/competitors`),
 };

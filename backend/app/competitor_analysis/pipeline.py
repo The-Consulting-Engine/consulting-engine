@@ -63,6 +63,7 @@ class PipelineConfig:
 
     # Scraping options
     scrape_ubereats: bool = True
+    skip_target_scrape: bool = False  # If True, skip Uber Eats scrape for target (use owner menu)
     max_menu_items_per_restaurant: int = 100  # Limit to control costs
 
     # LLM options
@@ -250,6 +251,8 @@ class CompetitorAnalysisPipeline:
         address: str,
         config: Optional[PipelineConfig] = None,
         progress_callback: Optional[callable] = None,
+        owner_menu_items: Optional[pd.DataFrame] = None,
+        manual_competitors: Optional[list[dict]] = None,
     ) -> PipelineResult:
         """
         Run the complete analysis pipeline.
@@ -260,6 +263,10 @@ class CompetitorAnalysisPipeline:
             config: Pipeline configuration (uses defaults if not provided)
             progress_callback: Optional callback for progress updates
                               Signature: callback(step: str, message: str)
+            owner_menu_items: Optional DataFrame of owner-provided menu items
+                             (columns: restaurant_id, item_name, price_numeric, category, etc.)
+            manual_competitors: Optional list of {"name": str, "address": str} dicts
+                               for user-specified competitors to always include
 
         Returns:
             PipelineResult with all analysis outputs
@@ -307,57 +314,129 @@ class CompetitorAnalysisPipeline:
             errors.append(f"Competitor discovery failed: {str(e)}")
             raise RuntimeError(f"Pipeline failed at Step 1: {e}")
 
+        # Merge manual competitors (user-specified) that aren't already found
+        if manual_competitors:
+            existing_names = {c.name.lower() for c in competitors}
+            for mc in manual_competitors:
+                mc_name = mc.get("name", "")
+                mc_address = mc.get("address", "")
+                if not mc_name or not mc_address:
+                    continue
+                if mc_name.lower() in existing_names:
+                    log("STEP 1", f"Manual competitor already found: {mc_name}")
+                    continue
+                # Create a stub competitor object for manual entries
+                try:
+                    async with CompetitorAnalyzer(
+                        google_api_key=self.google_api_key,
+                        apify_token=self.apify_token,
+                    ) as analyzer:
+                        manual_result = await analyzer.find_cuisine_competitors(
+                            name=mc_name,
+                            address=mc_address,
+                            radius_meters=500,
+                            max_competitors=0,
+                            enrich_ubereats=False,
+                        )
+                        manual_target = manual_result.get("target")
+                        if manual_target:
+                            from .analyzer import CompetitorRestaurant
+                            mc_comp = CompetitorRestaurant(
+                                place_id=manual_target["place_id"],
+                                name=manual_target["name"],
+                                address=manual_target["address"],
+                                rating=manual_target.get("rating", 0),
+                                user_ratings_total=manual_target.get("review_count", 0),
+                                price_level=manual_target.get("price_level"),
+                                distance_meters=0,
+                                cuisines=manual_target.get("cuisines", []),
+                            )
+                            competitors.append(mc_comp)
+                            log("STEP 1", f"Added manual competitor: {mc_name}")
+                        else:
+                            warnings.append(f"Manual competitor not found on Google: {mc_name}")
+                except Exception as e:
+                    warnings.append(f"Failed to look up manual competitor {mc_name}: {str(e)}")
+                    log("STEP 1", f"Manual competitor lookup failed: {mc_name} - {e}")
+
         # ---------------------------------------------------------------------
         # STEP 2: Scrape Uber Eats menus
         # ---------------------------------------------------------------------
         all_menu_items = []
         restaurants_raw = []
 
+        # Inject owner-provided menu if available (skip target scrape)
+        skip_target = config.skip_target_scrape and owner_menu_items is not None and len(owner_menu_items) > 0
+
+        if skip_target:
+            log("STEP 2", f"Using owner-provided menu ({len(owner_menu_items)} items)")
+            restaurants_raw.append({
+                "restaurant_id": target_info["place_id"],
+                "name": target_info["name"],
+                "address": target_info["address"],
+                "rating": target_info["rating"],
+                "review_count": target_info["review_count"],
+                "cuisines": target_info.get("cuisines", []),
+                "source": "owner_provided",
+            })
+            for _, row in owner_menu_items.iterrows():
+                all_menu_items.append({
+                    "restaurant_id": target_info["place_id"],
+                    "item_name": row.get("item_name"),
+                    "category": row.get("category"),
+                    "description": row.get("description", ""),
+                    "price": row.get("price_numeric"),
+                    "source": "owner_provided",
+                })
+
         if config.scrape_ubereats:
             log("STEP 2", "Scraping Uber Eats for menu data...")
 
             try:
                 async with ApifyScraper(api_token=self.apify_token) as scraper:
-                    # Scrape target
-                    log("STEP 2", f"Scraping target: {target_info['name']}")
-                    target_ue = await scraper.scrape_ubereats_menu(
-                        restaurant_name=target_info['name'],
-                        address=address,
-                    )
+                    # Scrape target (unless owner menu was injected)
+                    if not skip_target:
+                        log("STEP 2", f"Scraping target: {target_info['name']}")
+                        target_ue = await scraper.scrape_ubereats_menu(
+                            restaurant_name=target_info['name'],
+                            address=address,
+                        )
 
-                    if target_ue.get("found"):
-                        menu_count = len(target_ue.get("menu_items", []))
-                        log("STEP 2", f"  ✓ Found {menu_count} menu items")
-                        restaurants_raw.append({
-                            "restaurant_id": target_info["place_id"],
-                            "name": target_info["name"],
-                            "address": target_info["address"],
-                            "rating": target_ue.get("rating") or target_info["rating"],
-                            "review_count": target_ue.get("rating_count") or target_info["review_count"],
-                            "cuisines": target_info.get("cuisines", []),
-                            "source": "uber_eats",
-                        })
-                        for item in target_ue.get("menu_items", [])[:config.max_menu_items_per_restaurant]:
-                            all_menu_items.append({
+                        if target_ue.get("found"):
+                            menu_count = len(target_ue.get("menu_items", []))
+                            log("STEP 2", f"  ✓ Found {menu_count} menu items")
+                            restaurants_raw.append({
                                 "restaurant_id": target_info["place_id"],
-                                "item_name": item.get("name"),
-                                "category": item.get("category"),
-                                "description": item.get("description"),
-                                "price": item.get("price"),
+                                "name": target_info["name"],
+                                "address": target_info["address"],
+                                "rating": target_ue.get("rating") or target_info["rating"],
+                                "review_count": target_ue.get("rating_count") or target_info["review_count"],
+                                "cuisines": target_info.get("cuisines", []),
                                 "source": "uber_eats",
                             })
+                            for item in target_ue.get("menu_items", [])[:config.max_menu_items_per_restaurant]:
+                                all_menu_items.append({
+                                    "restaurant_id": target_info["place_id"],
+                                    "item_name": item.get("name"),
+                                    "category": item.get("category"),
+                                    "description": item.get("description"),
+                                    "price": item.get("price"),
+                                    "source": "uber_eats",
+                                })
+                        else:
+                            warnings.append(f"Target restaurant not found on Uber Eats")
+                            log("STEP 2", f"  ✗ Not found on Uber Eats")
+                            restaurants_raw.append({
+                                "restaurant_id": target_info["place_id"],
+                                "name": target_info["name"],
+                                "address": target_info["address"],
+                                "rating": target_info["rating"],
+                                "review_count": target_info["review_count"],
+                                "cuisines": target_info.get("cuisines", []),
+                                "source": "google_places",
+                            })
                     else:
-                        warnings.append(f"Target restaurant not found on Uber Eats")
-                        log("STEP 2", f"  ✗ Not found on Uber Eats")
-                        restaurants_raw.append({
-                            "restaurant_id": target_info["place_id"],
-                            "name": target_info["name"],
-                            "address": target_info["address"],
-                            "rating": target_info["rating"],
-                            "review_count": target_info["review_count"],
-                            "cuisines": target_info.get("cuisines", []),
-                            "source": "google_places",
-                        })
+                        log("STEP 2", "Skipping target scrape (using owner menu)")
 
                     # Scrape competitors
                     for comp in competitors:
@@ -402,15 +481,16 @@ class CompetitorAnalysisPipeline:
                 warnings.append("Continuing without Uber Eats data")
         else:
             log("STEP 2", "Skipping Uber Eats scraping (disabled in config)")
-            # Add restaurants from Google data only
-            restaurants_raw.append({
-                "restaurant_id": target_info["place_id"],
-                "name": target_info["name"],
-                "address": target_info["address"],
-                "rating": target_info["rating"],
-                "review_count": target_info["review_count"],
-                "source": "google_places",
-            })
+            # Add restaurants from Google data only (skip target if owner menu injected)
+            if not skip_target:
+                restaurants_raw.append({
+                    "restaurant_id": target_info["place_id"],
+                    "name": target_info["name"],
+                    "address": target_info["address"],
+                    "rating": target_info["rating"],
+                    "review_count": target_info["review_count"],
+                    "source": "google_places",
+                })
             for comp in competitors:
                 restaurants_raw.append({
                     "restaurant_id": comp.place_id,
@@ -524,6 +604,8 @@ async def run_analysis(
     restaurant_name: str,
     address: str,
     output_dir: Optional[str] = None,
+    owner_menu_items: Optional[pd.DataFrame] = None,
+    manual_competitors: Optional[list[dict]] = None,
     **config_kwargs,
 ) -> PipelineResult:
     """
@@ -545,6 +627,8 @@ async def run_analysis(
         restaurant_name=restaurant_name,
         address=address,
         config=config,
+        owner_menu_items=owner_menu_items,
+        manual_competitors=manual_competitors,
     )
 
     if output_dir:
