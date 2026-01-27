@@ -83,6 +83,23 @@ class Initiative(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class OwnerMenuItem(Base):
+    """Menu items provided directly by the restaurant owner."""
+    __tablename__ = "owner_menu_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cycle_id = Column(UUID(as_uuid=True), ForeignKey("cycles.id"), nullable=False)
+
+    # Item details
+    item_name = Column(Text, nullable=False)
+    price = Column(Text, nullable=False)  # Store as text, parse later (handles $12.99, 12.99, etc.)
+    category = Column(Text, nullable=True)  # e.g., "Appetizers", "Mains", "Drinks"
+    description = Column(Text, nullable=True)
+
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class CompetitorAnalysis(Base):
     """Stores competitor analysis results for a cycle."""
     __tablename__ = "competitor_analyses"

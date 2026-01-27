@@ -1,9 +1,143 @@
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "vertical_id": "restaurant_v0_1",
-  "title": "Profit Reset Intake (Restaurant MVP 0.1)",
-  "description": "Short intake to capture constraints, operations reality, and marketing channels. Mostly checkboxes and simple selects.",
+  "title": "Profit Reset Intake (Restaurant MVP 0.2)",
+  "description": "Intake to capture restaurant profile, competitive context, constraints, operations reality, and marketing channels.",
   "sections": [
+    {
+      "id": "R0_restaurant_identity",
+      "title": "Your Restaurant",
+      "description": "Tell us about your restaurant so we can analyze your competitive position.",
+      "questions": [
+        {
+          "id": "R0_1_restaurant_name",
+          "label": "What is your restaurant's name?",
+          "type": "short_text",
+          "required": true,
+          "max_chars": 100,
+          "placeholder": "e.g., Thai Basil Kitchen"
+        },
+        {
+          "id": "R0_2_address",
+          "label": "What is your restaurant's full address?",
+          "type": "short_text",
+          "required": true,
+          "max_chars": 200,
+          "placeholder": "e.g., 123 Main St, New Haven, CT 06510"
+        },
+        {
+          "id": "R0_3_cuisine_type",
+          "label": "What is your primary cuisine?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "American",
+            "Asian Fusion",
+            "Chinese",
+            "French",
+            "Greek",
+            "Indian",
+            "Italian",
+            "Japanese",
+            "Korean",
+            "Mediterranean",
+            "Mexican",
+            "Middle Eastern",
+            "Thai",
+            "Vietnamese",
+            "Other"
+          ]
+        },
+        {
+          "id": "R0_4_service_type",
+          "label": "What is your primary service style?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "Fine Dining",
+            "Casual Sit-down",
+            "Fast Casual",
+            "Quick Service (QSR)",
+            "Takeout/Delivery Only",
+            "Food Truck",
+            "Cafe/Bakery",
+            "Bar/Nightlife"
+          ]
+        },
+        {
+          "id": "R0_5_price_tier",
+          "label": "What is your typical price range per person?",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "$ (Under $15)",
+            "$$ ($15-30)",
+            "$$$ ($30-60)",
+            "$$$$ ($60+)"
+          ]
+        },
+        {
+          "id": "R0_6_menu_input_method",
+          "label": "How would you like to provide your menu?",
+          "helper_text": "We need your menu items and prices to compare against competitors.",
+          "type": "single_select",
+          "required": true,
+          "options": [
+            "I'll upload a CSV file",
+            "I'll enter items manually",
+            "Find my menu on Uber Eats (we'll scrape it)"
+          ]
+        },
+        {
+          "id": "R0_7_competitor_1_name",
+          "label": "Key Competitor #1 - Name (optional)",
+          "helper_text": "Name a competitor you want us to specifically analyze.",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 100,
+          "placeholder": "e.g., Pho Saigon"
+        },
+        {
+          "id": "R0_8_competitor_1_address",
+          "label": "Key Competitor #1 - Address",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 200,
+          "placeholder": "e.g., 456 Oak Ave, New Haven, CT 06511",
+          "depends_on": "R0_7_competitor_1_name"
+        },
+        {
+          "id": "R0_9_competitor_2_name",
+          "label": "Key Competitor #2 - Name (optional)",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 100
+        },
+        {
+          "id": "R0_10_competitor_2_address",
+          "label": "Key Competitor #2 - Address",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 200,
+          "depends_on": "R0_9_competitor_2_name"
+        },
+        {
+          "id": "R0_11_competitor_3_name",
+          "label": "Key Competitor #3 - Name (optional)",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 100
+        },
+        {
+          "id": "R0_12_competitor_3_address",
+          "label": "Key Competitor #3 - Address",
+          "type": "short_text",
+          "required": false,
+          "max_chars": 200,
+          "depends_on": "R0_11_competitor_3_name"
+        }
+      ]
+    },
     {
       "id": "A0_business_profile",
       "title": "Business profile",

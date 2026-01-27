@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api.routes import orgs, cycles, questionnaire, generate, results, competitors
+from app.api.routes import orgs, cycles, questionnaire, generate, results, competitors, menu
 from app.db.bootstrap import init_db
 from app.db.session import engine
 
@@ -55,6 +55,7 @@ app.include_router(questionnaire.router, prefix="/api", tags=["questionnaire"])
 app.include_router(generate.router, prefix="/api", tags=["generate"])
 app.include_router(results.router, prefix="/api", tags=["results"])
 app.include_router(competitors.router, prefix="/api", tags=["competitors"])
+app.include_router(menu.router, prefix="/api", tags=["menu"])
 
 
 @app.get("/")
