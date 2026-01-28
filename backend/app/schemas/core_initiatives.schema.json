@@ -19,17 +19,26 @@
       "steps": {
         "type": "array",
         "minItems": 3,
-        "maxItems": 7
+        "maxItems": 7,
+        "items": {
+          "type": "string"
+        }
       },
       "how_to_measure": {
         "type": "array",
         "minItems": 2,
-        "maxItems": 5
+        "maxItems": 5,
+        "items": {
+          "type": "string"
+        }
       },
       "assumptions": {
         "type": "array",
         "minItems": 0,
-        "maxItems": 4
+        "maxItems": 4,
+        "items": {
+          "type": "string"
+        }
       },
       "confidence_label": {
         "type": "string",
